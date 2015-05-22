@@ -36,7 +36,7 @@ class Collection extends EventEmitter
   _findFetch: (selector, options) ->
     processFind(@items, selector, options)
 
-  get: (_id) -> @find(_id: _id)
+  get: (_id) -> @findOne(_id: _id)
 
   upsert: (docs, bases, success, error) ->
     [items, success, error] = utils.regularizeUpsert(docs, bases, success, error)
@@ -50,15 +50,14 @@ class Collection extends EventEmitter
       @version += 1
       @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
       @items[item.doc._id]._version = @versions[item.doc._id]
-      @emit('change', item.doc)
+      @emit('change', {_id: item.doc._id, _version: item.doc._version})
 
     docs
 
   remove: (id) ->
     if _.has(@items, id)
-      prev_doc = @items[id]
+      prev_version = @items[id]._version
       @version += 1
       delete @items[id]
       delete @versions[id]
-      prev_doc._version += 1
-      @emit('change', prev_doc)
+      @emit('change', {_id: id, _version: prev_version + 1})

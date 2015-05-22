@@ -120,9 +120,25 @@ module.exports = ->
       assert.deepEqual results[0].c, { e: 2 }
       done()
 
+    it 'can get', (done) ->
+      result = @col.get '2'
+      assert.equal 'Charlie', result.a
+      done()
+
     it 'finds one row', (done) ->
       result = @col.findOne { _id: "2" }
       assert.equal 'Charlie', result.a
+      done()
+
+    it 'emits events', (done) ->
+      events = []
+      @col.on 'change', (token) ->
+        events.push token
+      @col.upsert {_id: 1, name: 'x'}
+      @col.upsert {_id: 1, name: 'y'}
+      @col.remove 1
+
+      assert.deepEqual events, [{_id: 1, _version: 2}, {_id: 1, _version: 3}, {_id: 1, _version: 4}]
       done()
 
     it 'removes item', (done) ->
