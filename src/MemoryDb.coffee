@@ -1,46 +1,42 @@
 _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
+{EventEmitter} = require 'events'
 
 # TODO: use ImmutableJS (requires changing selector.js which will
 # be painful)
 
 module.exports = class MemoryDb
-  constructor: (options, success) ->
+  constructor: ->
     @collections = {}
 
-    if success then success(this)
-
-  addCollection: (name, success, error) ->
+  addCollection: (name) ->
     collection = new Collection(name)
     @[name] = collection
     @collections[name] = collection
-    if success? then success()
 
 # Stores data in memory
-class Collection
+class Collection extends EventEmitter
   constructor: (name) ->
     @name = name
 
     @items = {}
-    @removes = {}  # Pending removes by _id. No longer in items
     @versions = {}
     @version = 1
 
   find: (selector, options) ->
-    return fetch: (success, error) =>
-      @_findFetch(selector, options, success, error)
+    return @_findFetch(selector, options)
 
-  findOne: (selector, options, success, error) ->
-    if _.isFunction(options)
-      [options, success, error] = [{}, options, success]
+  findOne: (selector, options) ->
+    options = options or {}
 
-    @find(selector, options).fetch (results) ->
-      if success? then success(if results.length>0 then results[0] else null)
-    , error
+    results = @find(selector, options)
+    if results.length > 0 then results[0] else null
 
-  _findFetch: (selector, options, success, error) ->
-    if success? then success(processFind(@items, selector, options))
+  _findFetch: (selector, options) ->
+    processFind(@items, selector, options)
+
+  get: (_id) -> @find(_id: _id)
 
   upsert: (docs, bases, success, error) ->
     [items, success, error] = utils.regularizeUpsert(docs, bases, success, error)
@@ -54,15 +50,15 @@ class Collection
       @version += 1
       @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
       @items[item.doc._id]._version = @versions[item.doc._id]
+      @emit('change', item.doc)
 
-    if success then success(docs)
+    docs
 
-  remove: (id, success, error) ->
+  remove: (id) ->
     if _.has(@items, id)
-      @removes[id] = @items[id]
+      prev_doc = @items[id]
+      @version += 1
       delete @items[id]
       delete @versions[id]
-    else
-      @removes[id] = { _id: id }
-
-    if success? then success()
+      prev_doc._version += 1
+      @emit('change', prev_doc)
