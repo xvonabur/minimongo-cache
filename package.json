@@ -1,7 +1,7 @@
 {
-  "name": "minimongo",
-  "version": "3.2.13",
-  "description": "Client-side mongo database with server sync over http",
+  "name": "minimongo-cache",
+  "version": "0.0.1",
+  "description": "Fork of minimongo designed for caching",
   "main": "index.js",
   "scripts": {
     "test": "testem ci",

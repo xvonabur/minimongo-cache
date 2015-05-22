@@ -1,2 +1,4 @@
-exports.MemoryDb = require('./lib/MemoryDb');
-exports.utils = require('./lib/utils');
+'use strict';
+
+var MemoryDb = require('./lib/MemoryDb');
+module.exports = MemoryDb;

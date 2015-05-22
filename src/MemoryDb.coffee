@@ -2,6 +2,9 @@ _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
 
+# TODO: use ImmutableJS (requires changing selector.js which will
+# be painful)
+
 module.exports = class MemoryDb
   constructor: (options, success) ->
     @collections = {}
