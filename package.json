@@ -7,24 +7,8 @@
     "test": "testem ci",
     "prepublish": "gulp"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/mWater/minimongo.git"
-  },
-  "keywords": [
-    "mongodb",
-    "mongo",
-    "minimongo",
-    "IndexedDb",
-    "WebSQL",
-    "storage"
-  ],
-  "author": "Clayton Grassick",
   "license": "LGPLv3",
-  "bugs": {
-    "url": "https://github.com/mWater/minimongo/issues"
-  },
-  "homepage": "https://github.com/mWater/minimongo",
+  "homepage": "https://github.com/petehunt/minimongo-cache",
   "devDependencies": {
     "bowser": "^0.7.1",
     "browserify": "^3.29.1",
