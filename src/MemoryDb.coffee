@@ -17,11 +17,6 @@ module.exports = class MemoryDb
     @collections[name] = collection
     if success? then success()
 
-  removeCollection: (name, success, error) ->
-    delete @[name]
-    delete @collections[name]
-    if success? then success()
-
 # Stores data in memory
 class Collection
   constructor: (name) ->
@@ -30,6 +25,7 @@ class Collection
     @items = {}
     @removes = {}  # Pending removes by _id. No longer in items
     @versions = {}
+    @version = 1
 
   find: (selector, options) ->
     return fetch: (success, error) =>
@@ -55,6 +51,7 @@ class Collection
 
       # Replace/add
       @items[item.doc._id] = item.doc
+      @version += 1
       @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
       @items[item.doc._id]._version = @versions[item.doc._id]
 
