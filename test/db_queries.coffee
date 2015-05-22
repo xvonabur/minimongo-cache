@@ -177,14 +177,8 @@ module.exports = ->
           assert doc2.a != "xyz"
           done()
 
-    it 'adds _id to rows', (done) ->
-      @col.upsert { a: "1" }, (item) ->
-        assert.property item, '_id'
-        assert.lengthOf item._id, 32
-        done()
-
     it 'returns array if called with array', (done) ->
-      @col.upsert [{ a: "1" }], (items) ->
+      @col.upsert [{ _id: 1, a: "1" }], (items) ->
         assert.equal items[0].a, "1"
         done()
 
@@ -208,7 +202,7 @@ module.exports = ->
     @reset =>
       docs = []
       for i in [0...100]
-        docs.push { b: i }
+        docs.push { _id: i, b: i }
 
       @col.upsert docs, =>
         @col.find({}).fetch (results) ->

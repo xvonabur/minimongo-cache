@@ -47,11 +47,6 @@ class Collection
     [items, success, error] = utils.regularizeUpsert(docs, bases, success, error)
 
     for item in items
-      # Fill in base if undefined
-      if item.base == undefined
-        # Use existing base
-        item.base = @items[item.doc._id] or null
-
       # Keep independent copies
       item = _.cloneDeep(item)
 

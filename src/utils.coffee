@@ -205,11 +205,7 @@ exports.regularizeUpsert = (docs, bases, success, error) ->
 
   # Set _id
   for item in items
-    if not item.doc._id
-      item.doc._id = exports.createUid()
-    if item.base and not item.base._id
-      throw new Error("Base needs _id")
-    if item.base and item.base._id != item.doc._id
-      throw new Error("Base needs same _id")
+    if not item.doc._id?
+      throw new Error('All documents in the upsert must have an _id')
 
   return [items, success, error]
