@@ -11,6 +11,8 @@ module.exports = class MemoryDb
     @collections = {}
 
   addCollection: (name) ->
+    if @[name]?
+      return
     collection = new Collection(name)
     @[name] = collection
     @collections[name] = collection
