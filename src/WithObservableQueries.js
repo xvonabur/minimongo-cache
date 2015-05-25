@@ -5,8 +5,16 @@
 function LoggingCollection(collection) {
   this.collection = collection;
 
+  // This is used for dependency tracking. We determine which collection change
+  // events are important by tracking if we've scanned a collection, and special-case
+  // for single-ID gets.
   this.numFinds = 0;
   this.gets = {};
+
+  // fetchLog is used for avoiding recomputes of aggregates. Once we've fetched we look
+  // at a log of all the data this query fetched, and if it's the same as last time we
+  // don't need to update. Since minimongo-cache tracks version numbers this may actually
+  // be faster than React rendering.
   this.fetchLog = [];
   this.identityKey = null;
 }
