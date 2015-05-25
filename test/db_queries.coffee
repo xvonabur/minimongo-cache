@@ -136,12 +136,15 @@ module.exports = ->
         events.push [collectionName, token]
       @db.write (db) ->
         db.scratch.upsert {_id: 1, name: 'x'}
+      assert.deepEqual events, [['scratch', {_id: 1, _version: 2}]]
+
+      events.length = 0
+
+      @db.write (db) ->
         db.scratch.upsert {_id: 1, name: 'y'}
         db.scratch.remove 1
 
       assert.deepEqual events, [
-        ['scratch', {_id: 1, _version: 2}],
-        ['scratch', {_id: 1, _version: 3}],
         ['scratch', {_id: 1, _version: 4}]
       ]
       done()

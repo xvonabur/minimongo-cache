@@ -9,7 +9,7 @@ WithObservableQueries = require('./WithObservableQueries')
 
 module.exports = class MemoryDb extends EventEmitter
   constructor: (alwaysAllowWrites) ->
-    @alwaysAllowWrites = alwaysAllowWrites
+    @alwaysAllowWrites = alwaysAllowWrites # for testing
     @collections = {}
     @emitQueue = null
 
@@ -31,7 +31,16 @@ module.exports = class MemoryDb extends EventEmitter
       emitQueue = @emitQueue
       @emitQueue = null
 
+      emitQueue.reverse()
+      emittedEvents = {}
+
       emitQueue.forEach (args) =>
+        collectionName = args[1]
+        fragment = args[2]
+        key = collectionName + ':' + fragment._id
+        if emittedEvents[key]
+          return
+        emittedEvents[key] = true
         @emit.apply(this, args)
 
   queueEmit: (args...) ->
