@@ -48,8 +48,9 @@ class Collection
     [items, success, error] = utils.regularizeUpsert(docs, bases, success, error)
 
     for item in items
-      # Keep independent copies
-      item = _.cloneDeep(item)
+      # Shallow copy since MemoryDb adds _version to the document.
+      # TODO: should we get rid of this mutation?
+      item = _.clone(item)
 
       # Replace/add
       @items[item.doc._id] = item.doc

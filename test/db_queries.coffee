@@ -220,21 +220,10 @@ module.exports = ->
       assert.deepEqual _.pluck(results, '_id'), ["2"]
       done()
 
-    it 'fetches independent copies', (done) ->
-      # TODO: eww
+    it 'shares memory', (done) ->
       result1 = @col.findOne { _id: "2" }
       result2 = @col.findOne { _id: "2" }
-      assert result1 != result2
-      done()
-
-    it 'upsert keeps independent copies', (done) ->
-      doc = { _id: "2" }
-      item = @col.upsert doc
-      doc.a = "xyz"
-      item.a = "xyz"
-      doc2 = @col.findOne { _id:"2" }
-      assert doc != doc2
-      assert doc2.a != "xyz"
+      assert result1 is result2
       done()
 
     it 'returns array if called with array', (done) ->

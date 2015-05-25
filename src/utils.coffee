@@ -27,8 +27,6 @@ exports.processFind = (items, selector, options) ->
   # Clone to prevent accidental updates, or apply fields if present
   if options and options.fields
     filtered = exports.filterFields(filtered, options.fields)
-  else
-    filtered = _.map filtered, (doc) -> _.cloneDeep(doc)
 
   return filtered
 
@@ -39,8 +37,6 @@ exports.filterFields = (items, fields={}) ->
 
   # For each item
   return _.map items, (item) ->
-    item = _.cloneDeep(item)
-
     newItem = {}
 
     if _.first(_.values(fields)) == 1
