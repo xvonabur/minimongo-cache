@@ -134,9 +134,10 @@ module.exports = ->
       events = []
       @db.on 'change', (collectionName, token) ->
         events.push [collectionName, token]
-      @col.upsert {_id: 1, name: 'x'}
-      @col.upsert {_id: 1, name: 'y'}
-      @col.remove 1
+      @db.write (db) ->
+        db.scratch.upsert {_id: 1, name: 'x'}
+        db.scratch.upsert {_id: 1, name: 'y'}
+        db.scratch.remove 1
 
       assert.deepEqual events, [
         ['scratch', {_id: 1, _version: 2}],
@@ -150,13 +151,13 @@ module.exports = ->
       queryEvents = 0
       getQueryEvents = 0
 
-      q = @db.query (db) ->
+      q = @db.read (db) ->
         queryEvents++
         return db.scratch.find({_id: '1'})
 
       q.subscribe (result) -> subscribeEvents.push(result)
 
-      q2 = @db.query (db) ->
+      q2 = @db.read (db) ->
         getQueryEvents++
         return db.scratch.get(1)
       q2.subscribe () -> null
@@ -169,7 +170,8 @@ module.exports = ->
       queryEvents = 0
       getQueryEvents = 0
 
-      @col.upsert({_id: "1", a: "Bob"})
+      @db.write (db) ->
+        db.scratch.upsert({_id: "1", a: "Bob"})
       assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob"}]]
       assert.equal queryEvents, 1
       assert.equal getQueryEvents, 1
@@ -179,7 +181,8 @@ module.exports = ->
       getQueryEvents = 0
 
       # Updating a collection should not trigger get() updates or re-renders
-      @col.upsert({_id: '2', a: 'Jimbo'})
+      @db.write (db) ->
+        db.scratch.upsert({_id: '2', a: 'Jimbo'})
       assert.deepEqual subscribeEvents, []
       assert.equal queryEvents, 1
       assert.equal getQueryEvents, 0

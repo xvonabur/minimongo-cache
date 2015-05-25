@@ -146,7 +146,7 @@ ObservableQuery.prototype.changeListener = function(collectionName, documentFrag
 };
 
 var WithObservableQueries = {
-  query: function(func) {
+  read: function(func) {
     return new ObservableQuery(this, func);
   },
 };

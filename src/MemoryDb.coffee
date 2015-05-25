@@ -8,8 +8,10 @@ WithObservableQueries = require('./WithObservableQueries')
 # be painful)
 
 module.exports = class MemoryDb extends EventEmitter
-  constructor: ->
+  constructor: (alwaysAllowWrites) ->
+    @alwaysAllowWrites = alwaysAllowWrites
     @collections = {}
+    @emitQueue = null
 
   addCollection: (name) ->
     if @[name]?
@@ -18,13 +20,35 @@ module.exports = class MemoryDb extends EventEmitter
     @[name] = collection
     @collections[name] = collection
 
+  write: (func) ->
+    if @emitQueue is not null
+      throw new Error('Already in a Transaction')
+
+    @emitQueue = []
+    try
+      func(this)
+    finally
+      emitQueue = @emitQueue
+      @emitQueue = null
+
+      emitQueue.forEach (args) =>
+        @emit.apply(this, args)
+
+  queueEmit: (args...) ->
+    if not @emitQueue
+      if @alwaysAllowWrites
+        return
+      throw new Error('Not in a write() block')
+
+    @emitQueue.push args
+
 _.mixin(MemoryDb.prototype, WithObservableQueries)
 
 # Stores data in memory
 class Collection
-  constructor: (name, eventEmitter) ->
+  constructor: (name, db) ->
     @name = name
-    @eventEmitter = eventEmitter
+    @db = db
 
     @items = {}
     @versions = {}
@@ -57,7 +81,7 @@ class Collection
       @version += 1
       @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
       @items[item.doc._id]._version = @versions[item.doc._id]
-      @eventEmitter.emit('change', @name, {_id: item.doc._id, _version: item.doc._version})
+      @db.queueEmit('change', @name, {_id: item.doc._id, _version: item.doc._version})
 
     docs
 
@@ -67,4 +91,4 @@ class Collection
       @version += 1
       delete @items[id]
       delete @versions[id]
-      @eventEmitter.emit('change', @name, {_id: id, _version: prev_version + 1})
+      @db.queueEmit('change', @name, {_id: id, _version: prev_version + 1})

@@ -7,7 +7,7 @@ _ = require 'lodash'
 describe 'MemoryDb', ->
   before (done) ->
     @reset = (done) =>
-      @db = new MemoryDb()
+      @db = new MemoryDb(true)
       @db.addCollection("scratch")
       @col = @db.scratch
       done()
