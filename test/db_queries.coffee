@@ -132,13 +132,58 @@ module.exports = ->
 
     it 'emits events', (done) ->
       events = []
-      @col.on 'change', (token) ->
-        events.push token
+      @db.on 'change', (collectionName, token) ->
+        events.push [collectionName, token]
       @col.upsert {_id: 1, name: 'x'}
       @col.upsert {_id: 1, name: 'y'}
       @col.remove 1
 
-      assert.deepEqual events, [{_id: 1, _version: 2}, {_id: 1, _version: 3}, {_id: 1, _version: 4}]
+      assert.deepEqual events, [
+        ['scratch', {_id: 1, _version: 2}],
+        ['scratch', {_id: 1, _version: 3}],
+        ['scratch', {_id: 1, _version: 4}]
+      ]
+      done()
+
+    it 'supports observable queries', (done) ->
+      subscribeEvents = []
+      queryEvents = 0
+      getQueryEvents = 0
+
+      q = @db.query (db) ->
+        queryEvents++
+        return db.scratch.find({_id: '1'})
+
+      q.subscribe (result) -> subscribeEvents.push(result)
+
+      q2 = @db.query (db) ->
+        getQueryEvents++
+        return db.scratch.get(1)
+      q2.subscribe () -> null
+
+      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:1, a:"Alice", b:1, c: { d: 1, e: 2 } }]]
+      assert.equal queryEvents, 1
+      assert.equal getQueryEvents, 1
+
+      subscribeEvents.length = 0;
+      queryEvents = 0
+      getQueryEvents = 0
+
+      @col.upsert({_id: "1", a: "Bob"})
+      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob"}]]
+      assert.equal queryEvents, 1
+      assert.equal getQueryEvents, 1
+
+      subscribeEvents.length = 0;
+      queryEvents = 0
+      getQueryEvents = 0
+
+      # Updating a collection should not trigger get() updates or re-renders
+      @col.upsert({_id: '2', a: 'Jimbo'})
+      assert.deepEqual subscribeEvents, []
+      assert.equal queryEvents, 1
+      assert.equal getQueryEvents, 0
+
       done()
 
     it 'removes item', (done) ->

@@ -2,25 +2,29 @@ _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
 {EventEmitter} = require 'events'
+WithObservableQueries = require('./WithObservableQueries')
 
 # TODO: use ImmutableJS (requires changing selector.js which will
 # be painful)
 
-module.exports = class MemoryDb
+module.exports = class MemoryDb extends EventEmitter
   constructor: ->
     @collections = {}
 
   addCollection: (name) ->
     if @[name]?
       return
-    collection = new Collection(name)
+    collection = new Collection(name, this)
     @[name] = collection
     @collections[name] = collection
 
+_.mixin(MemoryDb.prototype, WithObservableQueries)
+
 # Stores data in memory
-class Collection extends EventEmitter
-  constructor: (name) ->
+class Collection
+  constructor: (name, eventEmitter) ->
     @name = name
+    @eventEmitter = eventEmitter
 
     @items = {}
     @versions = {}
@@ -52,7 +56,7 @@ class Collection extends EventEmitter
       @version += 1
       @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
       @items[item.doc._id]._version = @versions[item.doc._id]
-      @emit('change', {_id: item.doc._id, _version: item.doc._version})
+      @eventEmitter.emit('change', @name, {_id: item.doc._id, _version: item.doc._version})
 
     docs
 
@@ -62,4 +66,4 @@ class Collection extends EventEmitter
       @version += 1
       delete @items[id]
       delete @versions[id]
-      @emit('change', {_id: id, _version: prev_version + 1})
+      @eventEmitter.emit('change', @name, {_id: id, _version: prev_version + 1})
