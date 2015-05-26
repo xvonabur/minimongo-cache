@@ -2,6 +2,7 @@ _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
 {EventEmitter} = require 'events'
+WithCreateQuery = require './WithCreateQuery'
 WithObservableQueries = require('./WithObservableQueries')
 
 # TODO: use ImmutableJS (requires changing selector.js which will
@@ -21,6 +22,7 @@ module.exports = class MemoryDb extends EventEmitter
     @collections[name] = collection
 
   write: (func) ->
+    # TODO: this may be excessive
     if @emitQueue is not null
       throw new Error('Already in a Transaction')
 
@@ -52,6 +54,7 @@ module.exports = class MemoryDb extends EventEmitter
     @emitQueue.push args
 
 _.mixin(MemoryDb.prototype, WithObservableQueries)
+_.mixin(MemoryDb.prototype, WithCreateQuery)
 
 # Stores data in memory
 class Collection

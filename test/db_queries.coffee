@@ -192,6 +192,17 @@ module.exports = ->
 
       done()
 
+    it 'supports createQuery()', (done) ->
+      q = @db.createQuery
+        read: (db) -> db.scratch.find {}
+        fetchIfNeeded: (db, cachedData) ->
+          db.write (db) =>
+            db.scratch.upsert({_id: '5', a: @args.name})
+      q(name: 'pete').subscribe (val) ->
+        assert.equal val.length, 4
+        assert.equal val[3].a, 'pete'
+        done()
+
     it 'removes item', (done) ->
       @col.remove "2"
       results = @col.find({})
