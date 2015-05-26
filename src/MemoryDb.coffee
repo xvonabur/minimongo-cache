@@ -21,14 +21,14 @@ module.exports = class MemoryDb extends EventEmitter
     @[name] = collection
     @collections[name] = collection
 
-  write: (func) ->
+  write: (func, context) ->
     # TODO: this may be excessive
     if @emitQueue is not null
       throw new Error('Already in a Transaction')
 
     @emitQueue = []
     try
-      func(this)
+      func.call(context, this)
     finally
       emitQueue = @emitQueue
       @emitQueue = null
