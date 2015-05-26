@@ -86,14 +86,14 @@ class Collection
     for item in items
       # Shallow copy since MemoryDb adds _version to the document.
       # TODO: should we get rid of this mutation?
-      item = _.clone(item)
+      doc = _.merge({}, @items[item.doc._id] || {}, item.doc)
 
       # Replace/add
-      @items[item.doc._id] = item.doc
+      @items[item.doc._id] = doc
       @version += 1
-      @versions[item.doc._id] = (@versions[item.doc._id] || 0) + 1
-      @items[item.doc._id]._version = @versions[item.doc._id]
-      @db.queueEmit('change', @name, {_id: item.doc._id, _version: item.doc._version})
+      @versions[doc._id] = (@versions[doc._id] || 0) + 1
+      @items[doc._id]._version = @versions[doc._id]
+      @db.queueEmit('change', @name, {_id: doc._id, _version: doc._version})
 
     docs
 

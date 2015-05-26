@@ -174,8 +174,8 @@ module.exports = ->
       getQueryEvents = 0
 
       @db.write (db) ->
-        db.scratch.upsert({_id: "1", a: "Bob"})
-      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob"}]]
+        db.scratch.upsert({_id: "1", a: "Bob", b: null, c: null})
+      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob", b: null, c: null}]]
       assert.equal queryEvents, 1
       assert.equal getQueryEvents, 1
 
