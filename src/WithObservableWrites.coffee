@@ -24,16 +24,18 @@ class WriteTransaction extends NullTransaction
 WithObservableWrites =
   write: (func, context) ->
     transaction = new WriteTransaction()
-    @withTransaction transaction, func, context
-    # Emit change event at the end of the transaction
-    changeRecords = {}
-    for collectionName, ids of transaction.dirtyIds
-      documentFragments = []
-      for id of ids
-        version = @collections[collectionName].versions[id]
-        documentFragments.push {_id: id, _version: version}
-      changeRecords[collectionName] = documentFragments
-    @emit 'change', changeRecords
+    try
+      @withTransaction transaction, func, context
+    finally
+      # Emit change event at the end of the transaction
+      changeRecords = {}
+      for collectionName, ids of transaction.dirtyIds
+        documentFragments = []
+        for id of ids
+          version = @collections[collectionName].versions[id]
+          documentFragments.push {_id: id, _version: version}
+        changeRecords[collectionName] = documentFragments
+      @emit 'change', changeRecords
 
 _.mixin WithObservableWrites, EventEmitter.prototype
 
