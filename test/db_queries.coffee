@@ -22,10 +22,11 @@ module.exports = ->
   context 'With sample rows', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", a:"Alice", b:1, c: { d: 1, e: 2 } }
-        @col.upsert { _id:"2", a:"Charlie", b:2, c: { d: 2, e: 3 } }
-        @col.upsert { _id:"3", a:"Bob", b:3 }, ->
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", a:"Alice", b:1, c: { d: 1, e: 2 } }
+          @col.upsert { _id:"2", a:"Charlie", b:2, c: { d: 2, e: 3 } }
+          @col.upsert { _id:"3", a:"Bob", b:3 }
+          done()
 
     it 'finds all rows', (done) ->
       results = @col.find({})
@@ -131,76 +132,68 @@ module.exports = ->
       done()
 
     it 'emits events', (done) ->
-      events = []
-      @db.on 'change', (collectionName, token) ->
-        events.push [collectionName, token]
-      @db.write (db) ->
-        db.scratch.upsert {_id: 1, name: 'x'}
-      assert.deepEqual events, [['scratch', {_id: 1, _version: 2}]]
+      # Break out of the transaction
+      process.nextTick =>
+        events = []
+        @db.on 'change', (changeRecords) ->
+          events.push changeRecords
+        @db.write =>
+          @db.scratch.upsert {_id: 1, name: 'x'}
+        assert.deepEqual events, [{scratch: [{_id: '1', _version: 2}]}]
 
-      events.length = 0
+        events.length = 0
 
-      @db.write (db) ->
-        db.scratch.upsert {_id: 1, name: 'y'}
-        db.scratch.remove 1
+        @db.write =>
+          @db.scratch.upsert {_id: 1, name: 'y'}
+          @db.scratch.remove 1
 
-      assert.deepEqual events, [
-        ['scratch', {_id: 1, _version: 4}]
-      ]
-      done()
+        assert.deepEqual events, [{scratch: [{_id: '1', _version: 4}]}]
+        done()
 
     it 'supports observable queries', (done) ->
-      subscribeEvents = []
-      queryEvents = 0
-      getQueryEvents = 0
+      # break out of the transaction
+      process.nextTick =>
+        subscribeEvents = []
+        queryEvents = 0
+        getQueryEvents = 0
 
-      q = @db.read (db) ->
-        queryEvents++
-        return db.scratch.find({_id: '1'})
+        q = @db.observe =>
+          queryEvents++
+          return @db.scratch.find({_id: '1'})
 
-      q.subscribe (result) -> subscribeEvents.push(result)
+        q.subscribe (result) -> subscribeEvents.push(result)
 
-      q2 = @db.read (db) ->
-        getQueryEvents++
-        return db.scratch.get(1)
-      q2.subscribe () -> null
+        q2 = @db.observe =>
+          getQueryEvents++
+          return @db.scratch.get(1)
+        q2.subscribe () -> null
 
-      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:1, a:"Alice", b:1, c: { d: 1, e: 2 } }]]
-      assert.equal queryEvents, 1
-      assert.equal getQueryEvents, 1
+        assert.deepEqual subscribeEvents, [[{ _id:"1", _version:1, a:"Alice", b:1, c: { d: 1, e: 2 } }]]
+        assert.equal queryEvents, 1
+        assert.equal getQueryEvents, 1
 
-      subscribeEvents.length = 0;
-      queryEvents = 0
-      getQueryEvents = 0
+        subscribeEvents.length = 0;
+        queryEvents = 0
+        getQueryEvents = 0
 
-      @db.write (db) ->
-        db.scratch.upsert({_id: "1", a: "Bob", b: null, c: null})
-      assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob", b: null, c: null}]]
-      assert.equal queryEvents, 1
-      assert.equal getQueryEvents, 1
+        @db.write =>
+          @db.scratch.upsert({_id: "1", a: "Bob", b: null, c: null})
 
-      subscribeEvents.length = 0;
-      queryEvents = 0
-      getQueryEvents = 0
+        assert.deepEqual subscribeEvents, [[{ _id:"1", _version:2, a:"Bob", b: null, c: null}]]
+        assert.equal queryEvents, 1
+        assert.equal getQueryEvents, 1
 
-      # Updating a collection should not trigger get() updates or re-renders
-      @db.write (db) ->
-        db.scratch.upsert({_id: '2', a: 'Jimbo'})
-      assert.deepEqual subscribeEvents, []
-      assert.equal queryEvents, 1
-      assert.equal getQueryEvents, 0
+        subscribeEvents.length = 0;
+        queryEvents = 0
+        getQueryEvents = 0
 
-      done()
+        # Updating a collection should not trigger get() updates or re-renders
+        @db.write =>
+          @db.scratch.upsert({_id: '2', a: 'Jimbo'})
+        assert.deepEqual subscribeEvents, []
+        assert.equal queryEvents, 1
+        assert.equal getQueryEvents, 0
 
-    it 'supports createQuery()', (done) ->
-      q = @db.createQuery
-        read: -> @db.scratch.find {}
-        fetchIfNeeded: (cachedData) ->
-          @db.write (db) =>
-            db.scratch.upsert({_id: '5', a: @args.name})
-      q(name: 'pete').subscribe (val) ->
-        assert.equal val.length, 4
-        assert.equal val[3].a, 'pete'
         done()
 
     it 'removes item', (done) ->
@@ -266,21 +259,23 @@ module.exports = ->
   it 'upserts multiple rows', (done) ->
     @timeout(10000)
     @reset =>
-      docs = []
-      for i in [0...100]
-        docs.push { _id: i, b: i }
+      @db.write =>
+        docs = []
+        for i in [0...100]
+          docs.push { _id: i, b: i }
 
-      @col.upsert docs
-      results = @col.find({})
-      assert.equal results.length, 100
-      done()
+        @col.upsert docs
+        results = @col.find({})
+        assert.equal results.length, 100
+        done()
 
   context 'With sample with capitalization', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", a:"Alice", b:1, c: { d: 1, e: 2 } }
-        @col.upsert { _id:"2", a:"AZ", b:2, c: { d: 2, e: 3 } }
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", a:"Alice", b:1, c: { d: 1, e: 2 } }
+          @col.upsert { _id:"2", a:"AZ", b:2, c: { d: 2, e: 3 } }
+          done()
 
     it 'finds sorts in Javascript order', (done) ->
       results = @col.find({}, {sort: ['a']})
@@ -290,10 +285,11 @@ module.exports = ->
   context 'With integer array in json rows', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", c: { arrint: [1, 2] }}
-        @col.upsert { _id:"2", c: { arrint: [2, 3] }}
-        @col.upsert { _id:"3", c: { arrint: [1, 3] }}
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", c: { arrint: [1, 2] }}
+          @col.upsert { _id:"2", c: { arrint: [2, 3] }}
+          @col.upsert { _id:"3", c: { arrint: [1, 3] }}
+          done()
 
     it 'filters by $in', (done) ->
       @testFilter { "c.arrint": { $in: [3] }}, ["2", "3"], done
@@ -304,10 +300,11 @@ module.exports = ->
   context 'With object array rows', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", c: [{ x: 1, y: 1 }, { x:1, y:2 }] }
-        @col.upsert { _id:"2", c: [{ x: 2, y: 1 }] }
-        @col.upsert { _id:"3", c: [{ x: 2, y: 2 }] }
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", c: [{ x: 1, y: 1 }, { x:1, y:2 }] }
+          @col.upsert { _id:"2", c: [{ x: 2, y: 1 }] }
+          @col.upsert { _id:"3", c: [{ x: 2, y: 2 }] }
+          done()
 
     it 'filters by $elemMatch', (done) ->
       @testFilter { "c": { $elemMatch: { y:1 }}}, ["1", "2"], =>
@@ -316,10 +313,11 @@ module.exports = ->
   context 'With array rows with inner string arrays', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", c: [{ arrstr: ["a", "b"]}, { arrstr: ["b", "c"]}] }
-        @col.upsert { _id:"2", c: [{ arrstr: ["b"]}] }
-        @col.upsert { _id:"3", c: [{ arrstr: ["c", "d"]}, { arrstr: ["e", "f"]}] }
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", c: [{ arrstr: ["a", "b"]}, { arrstr: ["b", "c"]}] }
+          @col.upsert { _id:"2", c: [{ arrstr: ["b"]}] }
+          @col.upsert { _id:"3", c: [{ arrstr: ["c", "d"]}, { arrstr: ["e", "f"]}] }
+          done()
 
     it 'filters by $elemMatch', (done) ->
       @testFilter { "c": { $elemMatch: { "arrstr": { $in: ["b"]} }}}, ["1", "2"], =>
@@ -328,10 +326,11 @@ module.exports = ->
   context 'With text array rows', ->
     beforeEach (done) ->
       @reset =>
-        @col.upsert { _id:"1", textarr: ["a", "b"]}
-        @col.upsert { _id:"2", textarr: ["b", "c"]}
-        @col.upsert { _id:"3", textarr: ["c", "d"]}
-        done()
+        @db.write =>
+          @col.upsert { _id:"1", textarr: ["a", "b"]}
+          @col.upsert { _id:"2", textarr: ["b", "c"]}
+          @col.upsert { _id:"3", textarr: ["c", "d"]}
+          done()
 
     it 'filters by $in', (done) ->
       @testFilter { "textarr": { $in: ["b"] }}, ["1", "2"], done
@@ -350,11 +349,12 @@ module.exports = ->
 
   context 'With geolocated rows', ->
     beforeEach (done) ->
-      @col.upsert { _id:"1", geo:geopoint(90, 45) }
-      @col.upsert { _id:"2", geo:geopoint(90, 46) }
-      @col.upsert { _id:"3", geo:geopoint(91, 45) }
-      @col.upsert { _id:"4", geo:geopoint(91, 46) }
-      done()
+      @db.write =>
+        @col.upsert { _id:"1", geo:geopoint(90, 45) }
+        @col.upsert { _id:"2", geo:geopoint(90, 46) }
+        @col.upsert { _id:"3", geo:geopoint(91, 45) }
+        @col.upsert { _id:"4", geo:geopoint(91, 46) }
+        done()
 
     it 'finds points near', (done) ->
       selector = geo:

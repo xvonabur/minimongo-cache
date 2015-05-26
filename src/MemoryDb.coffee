@@ -2,17 +2,78 @@ _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
 {EventEmitter} = require 'events'
-WithCreateQuery = require './WithCreateQuery'
-WithObservableQueries = require('./WithObservableQueries')
+WithObservableQueries = require './WithObservableQueries'
 
 # TODO: use ImmutableJS (requires changing selector.js which will
 # be painful)
 
+class NullTransaction
+  get: (collectionName, result, args...) -> result
+  find: (collectionName, result, args...) -> result
+  findOne: (collectionName, result, args...) -> result
+  upsert: (collectionName, result, args...) ->
+    throw new Error('Cannot write outside of a WriteTransaction')
+  remove: (collectionName, result, args...) ->
+    throw new Error('Cannot write outside of a WriteTransaction')
+  canPushTransaction: (transaction) -> true
+
+# TODO: move this to WithObservableQueries
+class ReadTransaction extends NullTransaction
+  constructor: ->
+    @dirtyIds = {}
+    @dirtyScans = {}
+    @log = []
+
+  _extractFragment: (doc) ->
+    if not doc
+      return null
+
+    return {
+      _id: doc._id,
+      _version: doc._version,
+    }
+
+  get: (collectionName, result, _id) ->
+    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
+    @dirtyIds[collectionName][_id] = true
+    @log.push @_extractFragment(result)
+    return result
+
+  find: (collectionName, result) ->
+    @dirtyScans[collectionName] = true
+    @log.push result.map(@_extractFragment)
+    return result
+
+  findOne: (collectionName, result) ->
+    @dirtyScans[collectionName] = true
+    @log.push @_extractFragment(result)
+    return result
+
+  canPushTransaction: -> false
+
+class WriteTransaction extends NullTransaction
+  constructor: ->
+    @dirtyIds = {}
+
+  upsert: (collectionName, result, docs) ->
+    docs = [docs] if not Array.isArray(docs)
+    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
+    docs.forEach (doc) =>
+      @dirtyIds[collectionName][doc._id] = true
+    return result
+
+  remove: (collectionName, result, id) ->
+    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
+    @dirtyIds[collectionName][id] = true
+    return result
+
+  canPushTransaction: -> false
+
 module.exports = class MemoryDb extends EventEmitter
-  constructor: (alwaysAllowWrites) ->
-    @alwaysAllowWrites = alwaysAllowWrites # for testing
+  constructor: ->
     @collections = {}
-    @emitQueue = null
+
+    @transaction = new NullTransaction()
 
   addCollection: (name) ->
     if @[name]?
@@ -21,40 +82,39 @@ module.exports = class MemoryDb extends EventEmitter
     @[name] = collection
     @collections[name] = collection
 
-  write: (func, context) ->
-    # TODO: this may be excessive
-    if @emitQueue is not null
-      throw new Error('Already in a Transaction')
+  withTransaction: (transaction, func, context) ->
+    if not @transaction.canPushTransaction(transaction)
+      throw new Error('Already in a transaction')
 
-    @emitQueue = []
+    prevTransaction = @transaction
+    @transaction = transaction
     try
-      func.call(context, this)
+      return func.call(context)
     finally
-      emitQueue = @emitQueue
-      @emitQueue = null
+      @transaction = prevTransaction
 
-      emitQueue.reverse()
-      emittedEvents = {}
+  write: (func, context) ->
+    transaction = new WriteTransaction()
+    @withTransaction transaction, func, context
+    # Emit change event at the end of the transaction
+    changeRecords = {}
+    for collectionName, ids of transaction.dirtyIds
+      documentFragments = []
+      for id of ids
+        version = @collections[collectionName].versions[id]
+        documentFragments.push {_id: id, _version: version}
+      changeRecords[collectionName] = documentFragments
+    @emit 'change', changeRecords
 
-      emitQueue.forEach (args) =>
-        collectionName = args[1]
-        fragment = args[2]
-        key = collectionName + ':' + fragment._id
-        if emittedEvents[key]
-          return
-        emittedEvents[key] = true
-        @emit.apply(this, args)
+  read: (func, context) ->
+    transaction = new ReadTransaction()
+    rv = @withTransaction transaction, func, context
+    return {
+      transaction: transaction,
+      value: rv
+    }
 
-  queueEmit: (args...) ->
-    if not @emitQueue
-      if @alwaysAllowWrites
-        return
-      throw new Error('Not in a write() block')
-
-    @emitQueue.push args
-
-_.mixin(MemoryDb.prototype, WithObservableQueries)
-_.mixin(MemoryDb.prototype, WithCreateQuery)
+_.mixin MemoryDb.prototype, WithObservableQueries
 
 # Stores data in memory
 class Collection
@@ -67,21 +127,35 @@ class Collection
     @version = 1
 
   find: (selector, options) ->
-    return @_findFetch(selector, options)
+    return @db.transaction.find(
+      @name,
+      @_findFetch(selector, options),
+      selector,
+      options
+    )
 
   findOne: (selector, options) ->
+    return @db.transaction.findOne(
+      @name,
+      @_findOne(selector, options),
+      selector,
+      options
+    )
+
+  _findOne: (selector, options) ->
     options = options or {}
 
-    results = @find(selector, options)
-    if results.length > 0 then results[0] else null
+    results = @_findFetch(selector, options)
+    return if results.length > 0 then results[0] else null
 
   _findFetch: (selector, options) ->
     processFind(@items, selector, options)
 
-  get: (_id) -> @findOne(_id: _id)
+  get: (_id) ->
+    return @db.transaction.get @name, @_findOne(_id: _id), _id
 
-  upsert: (docs, bases, success, error) ->
-    [items, success, error] = utils.regularizeUpsert(docs, bases, success, error)
+  upsert: (docs) ->
+    [items, _1, _2] = utils.regularizeUpsert(docs)
 
     for item in items
       # Shallow copy since MemoryDb adds _version to the document.
@@ -93,14 +167,13 @@ class Collection
       @version += 1
       @versions[doc._id] = (@versions[doc._id] || 0) + 1
       @items[doc._id]._version = @versions[doc._id]
-      @db.queueEmit('change', @name, {_id: doc._id, _version: doc._version})
 
-    docs
+    return @db.transaction.upsert @name, docs, docs
 
   remove: (id) ->
     if _.has(@items, id)
       prev_version = @items[id]._version
       @version += 1
+      @versions[id] = prev_version + 1
       delete @items[id]
-      delete @versions[id]
-      @db.queueEmit('change', @name, {_id: id, _version: prev_version + 1})
+    @db.transaction.remove @name, null, id
