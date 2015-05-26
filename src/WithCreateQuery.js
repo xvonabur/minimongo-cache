@@ -9,16 +9,21 @@ var WithCreateQuery = {
     }
     spec.fetchIfNeeded = spec.fetchIfNeeded || emptyFunction;
 
-    return function(args) {
-      var thisObj = {
-        args: args,
-      };
+    function Query(args) {
+      this.args = args;
+    }
 
-      var result = spec.read.call(thisObj, this);
-      spec.fetchIfNeeded.call(thisObj, this, result);
+    for (var name in spec) {
+      Query.prototype[name] = spec[name];
+    }
+
+    return function(args) {
+      var thisObj = new Query(args);
+      var result = thisObj.read(this);
+      thisObj.fetchIfNeeded(this, result);
 
       return this.read(function(db) {
-        return spec.read.call(thisObj, db);
+        return thisObj.read(db);
       });
     }.bind(this);
   },
