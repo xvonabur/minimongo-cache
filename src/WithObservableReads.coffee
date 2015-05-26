@@ -82,12 +82,13 @@ class ObservableRead
         @rerunTransaction()
         return
 
+      dirtyIdsForCollection = @lastReadTransaction.dirtyIds[collectionName] or {}
       # Did we change this particular ID? (fine-grained for gets)
       documentFragments = changeRecords[collectionName]
       i = 0
       while i < documentFragments.length
         documentFragment = documentFragments[i]
-        if @lastReadTransaction.dirtyIds[collectionName][documentFragment._id]
+        if dirtyIdsForCollection[documentFragment._id]
           @rerunTransaction()
           return
         i++
