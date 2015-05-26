@@ -194,9 +194,9 @@ module.exports = ->
 
     it 'supports createQuery()', (done) ->
       q = @db.createQuery
-        read: (db) -> db.scratch.find {}
-        fetchIfNeeded: (db, cachedData) ->
-          db.write (db) =>
+        read: -> @db.scratch.find {}
+        fetchIfNeeded: (cachedData) ->
+          @db.write (db) =>
             db.scratch.upsert({_id: '5', a: @args.name})
       q(name: 'pete').subscribe (val) ->
         assert.equal val.length, 4

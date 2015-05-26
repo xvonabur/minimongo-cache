@@ -9,7 +9,8 @@ var WithCreateQuery = {
     }
     spec.fetchIfNeeded = spec.fetchIfNeeded || emptyFunction;
 
-    function Query(args) {
+    function Query(db, args) {
+      this.db = db;
       this.args = args;
     }
 
@@ -18,11 +19,12 @@ var WithCreateQuery = {
     }
 
     return function(args) {
-      var thisObj = new Query(args);
-      var result = thisObj.read(this);
+      var thisObj = new Query(this, args);
+      var result = thisObj.read();
       thisObj.fetchIfNeeded(this, result);
 
       return this.read(function(db) {
+        thisObj.db = db;
         return thisObj.read(db);
       });
     }.bind(this);
