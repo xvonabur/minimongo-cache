@@ -43,7 +43,9 @@ class WriteTransaction extends NullTransaction
 
 
 WithObservableWrites =
-  getDefaultTransaction: -> return new WriteTransaction(this)
+  getDefaultTransaction: ->
+    @setMaxListeners 0
+    return new WriteTransaction(this)
 
 _.mixin WithObservableWrites, EventEmitter.prototype
 

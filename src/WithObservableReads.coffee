@@ -53,7 +53,7 @@ class ObservableRead
     cb @lastValue
 
   dispose: ->
-    @db.removeListener @changeListener
+    @db.removeListener 'change', @changeListener
 
   rerunTransaction: ->
     nextReadTransaction = new ReadTransaction()
