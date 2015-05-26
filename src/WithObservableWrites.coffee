@@ -4,38 +4,46 @@ NullTransaction = require './NullTransaction'
 _ = require 'lodash'
 
 class WriteTransaction extends NullTransaction
-  constructor: ->
+  constructor: (@db) ->
     @dirtyIds = {}
+    @queued = false
+
+  _ensureQueued: ->
+    if not @queued
+      @queued = true
+      process.nextTick => @_flush()
 
   upsert: (collectionName, result, docs) ->
     docs = [docs] if not Array.isArray(docs)
     @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
     docs.forEach (doc) =>
       @dirtyIds[collectionName][doc._id] = true
+    @_ensureQueued()
     return result
 
   remove: (collectionName, result, id) ->
     @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
     @dirtyIds[collectionName][id] = true
+    @_ensureQueued()
     return result
 
-  canPushTransaction: -> false
+  canPushTransaction: (transaction) -> true # nested writes would be bad, but impossible.
+
+  _flush: ->
+    changeRecords = {}
+    for collectionName, ids of @dirtyIds
+      documentFragments = []
+      for id of ids
+        version = @db.collections[collectionName].versions[id]
+        documentFragments.push {_id: id, _version: version}
+      changeRecords[collectionName] = documentFragments
+    @dirtyIds = {}
+    @queued = false
+    @db.emit 'change', changeRecords
+
 
 WithObservableWrites =
-  write: (func, context) ->
-    transaction = new WriteTransaction()
-    try
-      @withTransaction transaction, func, context
-    finally
-      # Emit change event at the end of the transaction
-      changeRecords = {}
-      for collectionName, ids of transaction.dirtyIds
-        documentFragments = []
-        for id of ids
-          version = @collections[collectionName].versions[id]
-          documentFragments.push {_id: id, _version: version}
-        changeRecords[collectionName] = documentFragments
-      @emit 'change', changeRecords
+  getDefaultTransaction: -> return new WriteTransaction(this)
 
 _.mixin WithObservableWrites, EventEmitter.prototype
 

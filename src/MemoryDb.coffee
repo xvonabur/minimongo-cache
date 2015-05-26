@@ -13,7 +13,9 @@ module.exports = class MemoryDb
   constructor: ->
     @collections = {}
 
-    @transaction = new NullTransaction()
+    @transaction = @getDefaultTransaction()
+
+  getDefaultTransaction: -> new NullTransaction()
 
   addCollection: (name) ->
     if @[name]?
