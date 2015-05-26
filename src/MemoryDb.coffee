@@ -1,75 +1,15 @@
+NullTransaction = require './NullTransaction'
+WithObservableReads = require './WithObservableReads'
+WithObservableWrites = require './WithObservableWrites'
+
 _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
-{EventEmitter} = require 'events'
-WithObservableQueries = require './WithObservableQueries'
 
 # TODO: use ImmutableJS (requires changing selector.js which will
 # be painful)
 
-class NullTransaction
-  get: (collectionName, result, args...) -> result
-  find: (collectionName, result, args...) -> result
-  findOne: (collectionName, result, args...) -> result
-  upsert: (collectionName, result, args...) ->
-    throw new Error('Cannot write outside of a WriteTransaction')
-  remove: (collectionName, result, args...) ->
-    throw new Error('Cannot write outside of a WriteTransaction')
-  canPushTransaction: (transaction) -> true
-
-# TODO: move this to WithObservableQueries
-class ReadTransaction extends NullTransaction
-  constructor: ->
-    @dirtyIds = {}
-    @dirtyScans = {}
-    @log = []
-
-  _extractFragment: (doc) ->
-    if not doc
-      return null
-
-    return {
-      _id: doc._id,
-      _version: doc._version,
-    }
-
-  get: (collectionName, result, _id) ->
-    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
-    @dirtyIds[collectionName][_id] = true
-    @log.push @_extractFragment(result)
-    return result
-
-  find: (collectionName, result) ->
-    @dirtyScans[collectionName] = true
-    @log.push result.map(@_extractFragment)
-    return result
-
-  findOne: (collectionName, result) ->
-    @dirtyScans[collectionName] = true
-    @log.push @_extractFragment(result)
-    return result
-
-  canPushTransaction: -> false
-
-class WriteTransaction extends NullTransaction
-  constructor: ->
-    @dirtyIds = {}
-
-  upsert: (collectionName, result, docs) ->
-    docs = [docs] if not Array.isArray(docs)
-    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
-    docs.forEach (doc) =>
-      @dirtyIds[collectionName][doc._id] = true
-    return result
-
-  remove: (collectionName, result, id) ->
-    @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
-    @dirtyIds[collectionName][id] = true
-    return result
-
-  canPushTransaction: -> false
-
-module.exports = class MemoryDb extends EventEmitter
+module.exports = class MemoryDb
   constructor: ->
     @collections = {}
 
@@ -93,28 +33,8 @@ module.exports = class MemoryDb extends EventEmitter
     finally
       @transaction = prevTransaction
 
-  write: (func, context) ->
-    transaction = new WriteTransaction()
-    @withTransaction transaction, func, context
-    # Emit change event at the end of the transaction
-    changeRecords = {}
-    for collectionName, ids of transaction.dirtyIds
-      documentFragments = []
-      for id of ids
-        version = @collections[collectionName].versions[id]
-        documentFragments.push {_id: id, _version: version}
-      changeRecords[collectionName] = documentFragments
-    @emit 'change', changeRecords
-
-  read: (func, context) ->
-    transaction = new ReadTransaction()
-    rv = @withTransaction transaction, func, context
-    return {
-      transaction: transaction,
-      value: rv
-    }
-
-_.mixin MemoryDb.prototype, WithObservableQueries
+_.mixin MemoryDb.prototype, WithObservableReads
+_.mixin MemoryDb.prototype, WithObservableWrites
 
 # Stores data in memory
 class Collection
