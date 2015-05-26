@@ -130,6 +130,13 @@ module.exports = ->
       assert.equal 'Charlie', result.a
       done()
 
+
+    it 'throws when the version is wrong', (done) ->
+      assert.throws =>
+        @col.upsert {_id: 1, _version: 0, name: 'y'}
+      @col.upsert {_id: 1, _version: 2, name: 'y'}
+      done()
+
     it 'emits events', (done) ->
       events = []
       @db.on 'change', (changeRecords) ->

@@ -6,6 +6,8 @@ _ = require 'lodash'
 utils = require('./utils')
 processFind = require('./utils').processFind
 
+class VersionMismatch extends Error
+
 # TODO: use ImmutableJS (requires changing selector.js which will
 # be painful)
 
@@ -37,6 +39,7 @@ module.exports = class MemoryDb
 
 _.mixin MemoryDb.prototype, WithObservableReads
 _.mixin MemoryDb.prototype, WithObservableWrites
+MemoryDb.VersionMismatch = VersionMismatch
 
 # Stores data in memory
 class Collection
@@ -73,6 +76,14 @@ class Collection
   _findFetch: (selector, options) ->
     processFind(@items, selector, options)
 
+  _throwIfVersionMismatch: (prevVersion, nextVersion) ->
+    if not prevVersion?
+      return
+    if not nextVersion?
+      return
+    if prevVersion + 1 != nextVersion
+      throw new VersionMismatch('Version mismatch: ' + prevVersion + ' ' + nextVersion)
+
   get: (_id) ->
     return @db.transaction.get @name, @_findOne(_id: _id), _id
 
@@ -80,6 +91,8 @@ class Collection
     [items, _1, _2] = utils.regularizeUpsert(docs)
 
     for item in items
+      @_throwIfVersionMismatch @versions[item.doc._id], item.doc._version
+
       # Shallow copy since MemoryDb adds _version to the document.
       # TODO: should we get rid of this mutation?
       doc = _.merge({}, @items[item.doc._id] || {}, item.doc)
@@ -92,9 +105,10 @@ class Collection
 
     return @db.transaction.upsert @name, docs, docs
 
-  remove: (id) ->
+  remove: (id, version) ->
     if _.has(@items, id)
       prev_version = @items[id]._version
+      @_throwIfVersionMismatch prev_version, version
       @version += 1
       @versions[id] = prev_version + 1
       delete @items[id]
