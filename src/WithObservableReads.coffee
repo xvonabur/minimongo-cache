@@ -51,6 +51,7 @@ class ObservableRead
   subscribe: (cb) ->
     @subscribers.push cb
     cb @lastValue
+    return this
 
   dispose: ->
     @db.removeListener 'change', @changeListener

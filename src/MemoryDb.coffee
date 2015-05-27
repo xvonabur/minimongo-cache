@@ -9,7 +9,7 @@ processFind = require('./utils').processFind
 class VersionMismatch extends Error
 
 # TODO: use ImmutableJS (requires changing selector.js which will
-# be painful)
+# be painful). This will also let us have rollbacks when there's a VersionMismatch.
 
 module.exports = class MemoryDb
   constructor: ->
