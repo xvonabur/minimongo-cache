@@ -244,6 +244,7 @@ module.exports = ->
           process.nextTick =>
             process.nextTick =>
               assert.deepEqual events, [[]]
+              done()
 
 
     it 'removes item', (done) ->
