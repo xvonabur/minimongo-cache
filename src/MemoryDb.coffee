@@ -1,6 +1,7 @@
 NullTransaction = require './NullTransaction'
 WithObservableReads = require './WithObservableReads'
 WithObservableWrites = require './WithObservableWrites'
+WithServerQuery = require './WithServerQuery'
 
 _ = require 'lodash'
 utils = require('./utils')
@@ -39,6 +40,7 @@ module.exports = class MemoryDb
 
 _.mixin MemoryDb.prototype, WithObservableReads
 _.mixin MemoryDb.prototype, WithObservableWrites
+_.mixin MemoryDb.prototype, WithServerQuery
 MemoryDb.VersionMismatch = VersionMismatch
 
 # Stores data in memory

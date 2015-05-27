@@ -201,6 +201,58 @@ module.exports = ->
 
           done()
 
+    it 'supports server queries', (done) ->
+      col = @col
+      db = @db
+      db.addCollection 'serverQueries'
+
+      serverQuery = @db.createServerQuery
+        query: ->
+          col.find {a: @args.name}
+
+        fetchIfNeeded: ->
+          fetchObj = db.serverQueries.get(@args.name)
+          if fetchObj and fetchObj.fetching
+            return
+
+          results = @query()
+          if results.length == 0
+            db.serverQueries.upsert {
+              _id: @args.name,
+              fetching: true
+            }
+
+            # simulate an ajax request
+            process.nextTick =>
+              col.upsert {_id: 4, a: 'Jimbo'}
+              db.serverQueries.upsert {
+                _id: @args.name,
+                fetching: false
+              }
+
+      events = []
+      obs = serverQuery {name: 'Jimbo'}
+      obs.subscribe (event) ->
+        events.push event
+
+      process.nextTick =>
+        process.nextTick =>
+          assert.deepEqual events, [
+            [],
+            [{_id: 4, a: 'Jimbo', _version: 1}]
+          ]
+
+          # Check longer pauses (i.e. no results returned)
+          obs.dispose()
+          obs = serverQuery {name: 'peter'}
+          events.length = 0
+          obs.subscribe (event) ->
+            events.push event
+          process.nextTick =>
+            process.nextTick =>
+              assert.deepEqual events, [[]]
+
+
     it 'removes item', (done) ->
       @col.remove "2"
       results = @col.find({})
