@@ -27,7 +27,9 @@ For the third issue, we store the object graph in a fully normalized state (i.e.
 
 For the fourth issue, since we treat the local database like a cache, we can use the same read-through caching techniques for data fetching that we use on the server; it's very clear where your server requests go.
 
-## Simple example
+## Examples
+
+### Simple example
 
 ```js
 var minimongo = require('minimongo-cache');
@@ -79,7 +81,7 @@ var user = cache.users.get('1');
 // cache.todos._version === 3, since there have been 3 upserts on that collection
 ```
 
-## Reactivity examples
+### Reactivity examples
 
 ```js
 // minimongo-cache is built in a modular style, so there are varying levels
@@ -118,7 +120,7 @@ todoItems.subscribe(function(results) {
 todoItems.dispose();
 ```
 
-## Server requests
+### Server requests
 
 `minimongo-cache` supports server fetches as a read-through cache.
 
@@ -173,7 +175,7 @@ var getTodos = cache.createServerQuery({
 });
 ```
 
-## Future work: MVCC
+### Future work: MVCC
 
 This is not implemeneted.
 
@@ -197,7 +199,7 @@ cache.transaction(function() {
 })
 ```
 
-## Tying it all together: domains example
+### Domains example
 
 ```js
 var TodosDomain = {
@@ -223,6 +225,35 @@ var UsersDomain = {
     };
   },
 };
+```
+
+### Working with React
+
+```js
+var React = require('react');
+
+var polyfillObserve = require('react-observe-polyfill');
+
+var UserContainer = React.createClass({
+  observe: function() {
+    return {
+      user: cache.observe(function() {
+        return UsersDomain.getUserInfo(this.props.userId);
+      }, this);
+    };
+  },
+
+  render: function() {
+    return (
+      <div>
+        My name is {this.data.user.profile.username}
+        and I have {this.data.user.todoCount} open TODOs.
+      </div>
+    );
+  },
+});
+
+polyfillObserve(MyContainer);
 ```
 
 ## Why not (your technique here)?
