@@ -234,6 +234,8 @@ var React = require('react');
 
 var polyfillObserve = require('react-observe-polyfill');
 
+// This could be made much cleaner with a mixin, but I want to stay true
+// to the React observe() API
 var UserContainer = React.createClass({
   observe: function() {
     return {
