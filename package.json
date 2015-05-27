@@ -27,6 +27,7 @@
     "vinyl-source-stream": "^0.1.1"
   },
   "dependencies": {
+    "eventemitter3": "^1.1.0",
     "lodash": "~2.4.1"
   }
 }

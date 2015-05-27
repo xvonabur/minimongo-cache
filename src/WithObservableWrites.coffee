@@ -1,4 +1,4 @@
-{EventEmitter} = require 'events'
+EventEmitter = require 'eventemitter3'
 NullTransaction = require './NullTransaction'
 
 _ = require 'lodash'
