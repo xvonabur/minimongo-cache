@@ -85,7 +85,8 @@ var user = cache.users.get('1');
 // minimongo-cache is built in a modular style, so there are varying levels
 // of reactivity supported. For example, you can just use it as a synchronous
 // cache, as shown above. It will also emit `change` events -- they will be
-// batched and deduped within a single event tick.
+// batched and deduped within a single event tick, so mutations within a single
+// event tick are effectively atomic to all observers.
 
 cache.on('change', function(changeRecords) {
   for (collectionName in changeRecords) {
@@ -101,6 +102,8 @@ cache.on('change', function(changeRecords) {
 // observable (see https://github.com/facebook/react/issues/3398)
 
 var todoItems = cache.observe(function() {
+  // This method should be pure. If you try to `upsert()` in here, it will
+  // throw.
   return cache.todos.find({authorId: '1'});
 });
 
@@ -123,7 +126,7 @@ todoItems.dispose();
 
 cache.addCollection('pendingFetches');
 
-var getTodos = cache.createServierQuery({
+var getTodos = cache.createServerQuery({
   query: function() {
     // Fetch the data from the cache
     return cache.todos.find({authorId: this.args.authorId});
@@ -200,6 +203,14 @@ cache.transaction(function() {
 var TodosDomain = {
   getTodos: function(authorId) {
     return cache.todos.find({authorId: authorId}, {sort: {completed: 1, timestamp: -1}});
+  },
+
+  // Mutation is straightforward.
+  markComplete: function(todoId) {
+    cache.todos.upsert({
+      _id: todoId,
+      completed: true,
+    });
   },
 };
 
