@@ -242,7 +242,7 @@ It's not out yet. But also, I think Relay may require changes to your server-sid
 
 ### Why not Meteor?
 
-While MongoDB is kind of convenient on the client, I don't trust it on the server and I am afraid of magical conflict resolution. Also their primary UI solution is still Blaze and I prefer React -- I think their Tracker system may have extra performance costs to support it (though I may be wrong!)
+While MongoDB is kind of convenient on the client, I may want a different database (or databases) on the server and I am afraid of magical conflict resolution. Also their primary UI solution is still Blaze and I prefer React -- I think their Tracker system may have extra performance costs to support it (though I may be wrong!)
 
 ## FAQ
 
