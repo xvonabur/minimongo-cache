@@ -281,10 +281,17 @@ module.exports = ->
       assert.deepEqual _.pluck(results, '_id'), ["2"]
       done()
 
-    it 'shares memory', (done) ->
+    it 'shares memory for identical instances', (done) ->
       result1 = @col.findOne { _id: "2" }
       result2 = @col.findOne { _id: "2" }
       assert result1 is result2
+      done()
+
+    it 'does not share memory for different instances', (done) ->
+      result1 = @col.findOne { _id: "2" }
+      @col.upsert {_id: "2", a: "1" }
+      result2 = @col.findOne { _id: "2" }
+      assert not (result1 is result2)
       done()
 
     it 'returns array if called with array', (done) ->
