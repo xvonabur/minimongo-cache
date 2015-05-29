@@ -125,6 +125,11 @@ module.exports = ->
       assert.equal 'Charlie', result.a
       done()
 
+    it 'can get missing', (done) ->
+      result = @col.get '999', 'honker burger'
+      assert.equal 'honker burger', result
+      done()
+
     it 'finds one row', (done) ->
       result = @col.findOne { _id: "2" }
       assert.equal 'Charlie', result.a

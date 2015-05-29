@@ -75,8 +75,8 @@ class Collection
   _findFetch: (selector, options) ->
     processFind(@items, selector, options)
 
-  get: (_id) ->
-    return @db.transaction.get @name, @_findOne(_id: _id), _id
+  get: (_id, missing) ->
+    return @db.transaction.get(@name, @_findOne(_id: _id), _id) or missing or null
 
   upsert: (docs) ->
     [items, _1, _2] = utils.regularizeUpsert(docs)
