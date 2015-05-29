@@ -63,9 +63,10 @@ class ObservableRead
     # If we read different data this time, notify of a change. This saves render() time
     if !@lastReadTransaction or !_.isEqual(@lastReadTransaction.log, nextReadTransaction.log)
       @lastReadTransaction = nextReadTransaction
+      prevValue = @lastValue
       @lastValue = value
       @subscribers.forEach ((cb) ->
-        cb @lastValue
+        cb @lastValue, prevValue # pass the old value for diffing purposes
         return
       ), this
 

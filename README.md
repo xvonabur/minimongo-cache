@@ -100,8 +100,8 @@ cache.on('change', function(changeRecords) {
   }
 });
 
-// minimongo-cache can support Meteor-style reactive queries and expose a React
-// observable (see https://github.com/facebook/react/issues/3398)
+// minimongo-cache can support Meteor-style reactive queries and will eventually expose a
+// React observable (see https://github.com/facebook/react/issues/3398)
 
 var todoItems = cache.observe(function() {
   // This method should be pure. If you try to `upsert()` in here, it will
@@ -232,30 +232,24 @@ var UsersDomain = {
 ```js
 var React = require('react');
 
-var polyfillObserve = require('react-observe-polyfill');
-
-// This could be made much cleaner with a mixin, but I want to stay true
-// to the React observe() API
+// This could also be built on the proposed React observe() API. This is not
+// yet implemented.
 var UserContainer = React.createClass({
-  observe: function() {
-    return {
-      user: cache.observe(function() {
-        return UsersDomain.getUserInfo(this.props.userId);
-      }, this);
-    };
+  mixins: [cache.getReactMixin()],
+
+  query: function() {
+    return {user: UsersDomain.getUserInfo(this.props.userId)};
   },
 
   render: function() {
     return (
       <div>
-        My name is {this.data.user.profile.username}
-        and I have {this.data.user.todoCount} open TODOs.
+        My name is {this.state.user.profile.username}
+        and I have {this.state.user.todoCount} open TODOs.
       </div>
     );
   },
 });
-
-polyfillObserve(MyContainer);
 ```
 
 ## Why not (your technique here)?
