@@ -143,7 +143,7 @@ module.exports = ->
         events.length = 0
 
         @col.upsert {_id: 1, name: 'y'}
-        @col.remove 1
+        @col.del 1
 
         assert.deepEqual events, []
         process.nextTick ->
@@ -247,16 +247,24 @@ module.exports = ->
               done()
 
 
-    it 'removes item', (done) ->
-      @col.remove "2"
+    it 'dels item', (done) ->
+      @col.del "2"
       results = @col.find({})
       assert.equal 2, results.length
       assert "1" in (result._id for result in results)
       assert "2" not in (result._id for result in results)
       done()
 
-    it 'removes non-existent item', (done) ->
-      @col.remove "999"
+    it 'removes items', (done) ->
+      @col.remove {_id: '2'}
+      results = @col.find({})
+      assert.equal 2, results.length
+      assert "1" in (result._id for result in results)
+      assert "2" not in (result._id for result in results)
+      done()
+
+    it 'dels non-existent item', (done) ->
+      @col.del "999"
       results = @col.find({})
       assert.equal 3, results.length
       done()

@@ -94,10 +94,14 @@ class Collection
 
     return @db.transaction.upsert @name, docs, docs
 
-  remove: (id) ->
+  del: (id) ->
     if _.has(@items, id)
       prev_version = @items[id]._version
       @version += 1
       @versions[id] = prev_version + 1
       delete @items[id]
-    @db.transaction.remove @name, null, id
+    @db.transaction.del @name, null, id
+
+  remove: (selector, options) ->
+    results = @_findFetch selector, options
+    results.forEach (doc) => @del doc._id

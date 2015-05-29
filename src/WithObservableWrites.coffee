@@ -21,7 +21,7 @@ class WriteTransaction extends NullTransaction
     @_ensureQueued()
     return result
 
-  remove: (collectionName, result, id) ->
+  del: (collectionName, result, id) ->
     @dirtyIds[collectionName] = @dirtyIds[collectionName] || {}
     @dirtyIds[collectionName][id] = true
     @_ensureQueued()

@@ -4,7 +4,7 @@ class NullTransaction
   findOne: (collectionName, result, args...) -> result
   upsert: (collectionName, result, args...) ->
     throw new Error('Cannot write outside of a WriteTransaction')
-  remove: (collectionName, result, args...) ->
+  del: (collectionName, result, args...) ->
     throw new Error('Cannot write outside of a WriteTransaction')
   canPushTransaction: (transaction) -> true
 
