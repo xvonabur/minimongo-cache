@@ -1,6 +1,7 @@
 NullTransaction = require './NullTransaction'
 WithObservableReads = require './WithObservableReads'
 WithObservableWrites = require './WithObservableWrites'
+WithReactMixin = require './WithReactMixin'
 WithServerQuery = require './WithServerQuery'
 
 _ = require 'lodash'
@@ -38,6 +39,7 @@ module.exports = class MemoryDb
 
 _.mixin MemoryDb.prototype, WithObservableReads
 _.mixin MemoryDb.prototype, WithObservableWrites
+_.mixin MemoryDb.prototype, WithReactMixin
 _.mixin MemoryDb.prototype, WithServerQuery
 
 # Stores data in memory

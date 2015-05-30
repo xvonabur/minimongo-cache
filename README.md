@@ -237,15 +237,15 @@ var React = require('react');
 var UserContainer = React.createClass({
   mixins: [cache.getReactMixin()],
 
-  query: function() {
+  observeData: function() {
     return {user: UsersDomain.getUserInfo(this.props.userId)};
   },
 
   render: function() {
     return (
       <div>
-        My name is {this.state.user.profile.username}
-        and I have {this.state.user.todoCount} open TODOs.
+        My name is {this.data.user.profile.username}
+        and I have {this.data.user.todoCount} open TODOs.
       </div>
     );
   },
@@ -280,5 +280,5 @@ Because the original was in CoffeeScript.
 ### What does this suck at?
 
   * It could maybe be rethought with immutable.js for better MVCC and `PureRenderMixin` support
-  * Doesn't solve batched requests, and therefore server rendering, like Relay does
+  * Doesn't solve the "n+1 queries" problem, and therefore server rendering, like Relay does
     * I intend to build this layer on top of this system
