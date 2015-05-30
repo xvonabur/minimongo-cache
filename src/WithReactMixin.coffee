@@ -1,9 +1,23 @@
 createMixin = (db) ->
   Mixin =
-    # TODO: support shouldComponentUpdate
     componentWillMount: ->
       @subscription = null;
+      @prevData = null
+      @data = {}
+      if @shouldComponentUpdate?
+        @_userShouldComponentUpdate = @shouldComponentUpdate
+        @shouldComponentUpdate = @_shouldComponentUpdate
+
       @_refresh()
+
+    _shouldComponentUpdate: (nextProps, nextState, nextContext) ->
+      nextData = @data
+      @data = @prevData
+      try
+        return @_userShouldComponentUpdate(nextProps, nextState, nextData, nextContext)
+      finally
+        @data = nextData
+        @prevData = @data
 
     _refresh: ->
       if @subscription
@@ -13,9 +27,10 @@ createMixin = (db) ->
       @subscription.subscribe @_setData
 
     _setData: (nextData, prevData) ->
+      @prevData = @data
       @data = nextData
       if prevData
-        @forceUpdate()
+        @setState({})
 
     componentWillUpdate: (nextProps, nextState) ->
       prevProps = @props
@@ -32,6 +47,7 @@ createMixin = (db) ->
     componentWillUnmount: ->
       if @subscription
         @subscription.dispose()
+
 
 WithReactMixin =
   getReactMixin: ->
