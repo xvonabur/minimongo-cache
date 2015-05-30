@@ -1,5 +1,6 @@
 createMixin = (db) ->
   Mixin =
+    # TODO: support shouldComponentUpdate
     componentWillMount: ->
       @subscription = null;
       @_refresh()
