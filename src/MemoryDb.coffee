@@ -19,6 +19,20 @@ module.exports = class MemoryDb
 
   getDefaultTransaction: -> new NullTransaction()
 
+  serialize: ->
+    data = {}
+    for collectionName of @collections
+      data[collectionName] = @collections[collectionName].serialize()
+    return data
+
+  @deserialize: (data) ->
+    db = new MemoryDb()
+    for collectionName of data
+      collection = Collection.deserialize db, data[collectionName]
+      db.collections[collectionName] = collection
+      db[collectionName] = collection
+    return db
+
   addCollection: (name) ->
     if @[name]?
       return
@@ -51,6 +65,21 @@ class Collection
     @items = {}
     @versions = {}
     @version = 1
+
+  serialize: ->
+    return {
+      name: @name,
+      items: @items,
+      versions: @versions,
+      version: @version,
+    }
+
+  @deserialize: (db, data) ->
+    collection = new Collection(data.name, db)
+    collection.items = data.items
+    collection.versions = data.versions
+    collection.version = data.version
+    return collection
 
   find: (selector, options) ->
     return @db.transaction.find(

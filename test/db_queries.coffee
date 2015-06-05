@@ -1,3 +1,4 @@
+MemoryDb = require "../lib/MemoryDb"
 _ = require 'lodash'
 chai = require 'chai'
 assert = chai.assert
@@ -251,6 +252,12 @@ module.exports = ->
               assert.deepEqual events, [[]]
               done()
 
+    it 'serializes and deseralizes', (done) ->
+      serialized = @db.serialize()
+      deserialized = MemoryDb.deserialize serialized
+      assert.deepEqual @col.find(), deserialized.scratch.find()
+      assert.deepEqual serialized, deserialized.serialize()
+      done()
 
     it 'dels item', (done) ->
       @col.del "2"
