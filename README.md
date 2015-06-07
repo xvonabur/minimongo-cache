@@ -81,6 +81,23 @@ var user = cache.users.get('1');
 // cache.todos._version === 3, since there have been 3 upserts on that collection
 ```
 
+### React Native Pollyfill
+In order to use this package with React Native you'll need to pollyfill process.nextTick before using.
+
+```
+if (typeof this.process === 'undefined') {
+  process = {};
+  process.nextTick = setImmediate;
+}   
+
+var cache = new minimongo();
+
+cache.addCollection('todos');
+
+....
+
+```
+
 ### Reactivity examples
 
 ```js
