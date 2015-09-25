@@ -88,7 +88,7 @@ In order to use this package with React Native you'll need to pollyfill process.
 if (typeof this.process === 'undefined') {
   process = {};
   process.nextTick = setImmediate;
-}   
+}
 
 var cache = new minimongo();
 
@@ -139,56 +139,43 @@ todoItems.dispose();
 
 ### Server requests
 
-`minimongo-cache` supports server fetches as a read-through cache.
+`minimongo-cache` supports server fetches through a read-through-cache abstraction.
 
 ```js
 
-cache.addCollection('pendingFetches');
+var xhr = require('xhr');
 
 var getTodos = cache.createServerQuery({
-  query: function() {
+  query: function(authorId) {
     // Fetch the data from the cache
-    return cache.todos.find({authorId: this.args.authorId});
+    var results = cache.todos.find({authorId: authorId});
+    if (results.length === 0) {
+      // null indicates that the cache is empty
+      return null;
+    }
+    return results;
   },
 
-  fetchIfNeeded: function() {
-    // Fetch data from the server. Note that if you do not have an
-    // early exit condition, you may infinite loop. I'm still working on mitigating
-    // this issue.
-    var pendingFetch = cache.pendingFetches.get(this.args.authorId) || {};
-    if (pendingFetch.fetching || pendingFetch.noMoreTodos) {
-      return;
-    }
-
-    var currentTodos = this.query();
-    if (currentTodos.length < this.args.count) {
-      // Indicate that we are fetching, so we don't send more than one fetch
-      // at a time.
-      cache.pendingFetches.upsert({
-        _id: this.args.authorId,
-        fetching: true,
-        error: null,
-      });
-
-      // Fetch the next page
-      xhr('/getTodos', {
-        authorId: this.args.authorId,
-        startOffset: currentTodos.length,
-        numToFetch: this.args.count - currentTodos.length,
-      }, function(err, body) {
-        body.results.forEach(function(result) {
-          cache.todos.upsert(result);
-        });
-
-        cache.pendingFetches.upsert({
-          _id: this.args.authorId,
-          fetching: false,
-          error: err,
-          noMoreTodos: body.results.length === 0,
-        });
-      });
-    }
+  fetch: function(authorId) {
+    // The return value of this function gets passed to the fetcher function (injected below)
+    return {
+      method: 'GET',
+      url: '/todos/' + encodeURIComponent(authorId),
+    };
   },
+
+  update: function(authorId, err, response) {
+    // This receives the results from the fetch and updates the local cache
+    response.forEach(function(result) {
+      cache.todos.upsert(result);
+    });
+  },
+});
+
+cache.injectFetcher(function(spec, cb) {
+  return xhr(spec, function(err, _, body) {
+    cb(err, body);
+  });
 });
 ```
 
@@ -249,8 +236,6 @@ var UsersDomain = {
 ```js
 var React = require('react');
 
-// This could also be built on the proposed React observe() API. This is not
-// yet implemented.
 var UserContainer = React.createClass({
   mixins: [cache.getReactMixin()],
 

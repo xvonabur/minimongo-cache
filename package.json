@@ -1,6 +1,6 @@
 {
   "name": "minimongo-cache",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "description": "Fork of minimongo designed for caching",
   "main": "index.js",
   "scripts": {
@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "eventemitter3": "^1.1.0",
+    "invariant": "^2.1.1",
     "lodash": "~2.4.1"
   }
 }

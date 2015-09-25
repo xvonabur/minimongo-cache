@@ -206,51 +206,37 @@ module.exports = ->
       db.addCollection 'serverQueries'
 
       serverQuery = @db.createServerQuery
-        query: ->
-          col.find {a: @args.name}
-
-        fetchIfNeeded: ->
-          fetchObj = db.serverQueries.get(@args.name)
-          if fetchObj and fetchObj.fetching
-            return
-
-          results = @query()
+        query: (name) ->
+          results = col.find {a: name}
           if results.length == 0
-            db.serverQueries.upsert {
-              _id: @args.name,
-              fetching: true
-            }
+            return null
+          return results
 
-            # simulate an ajax request
-            process.nextTick =>
-              col.upsert {_id: 4, a: 'Jimbo'}
-              db.serverQueries.upsert {
-                _id: @args.name,
-                fetching: false
-              }
+        fetch: (name) -> {url: '/blah', name: name}
 
-      events = []
-      obs = serverQuery {name: 'Jimbo'}
-      obs.subscribe (event) ->
-        events.push event
+        update: (name, err, response) ->
+          col.upsert {
+            _id: name,
+            a: response
+          }
 
-      process.nextTick =>
-        process.nextTick =>
-          assert.deepEqual events, [
-            [],
-            [{_id: 4, a: 'Jimbo', _version: 1}]
-          ]
+      num_fetches = 0
+      @db.injectFetcher (params, cb) ->
+        process.nextTick ->
+          num_fetches += 1
+          cb null, params.name
 
-          # Check longer pauses (i.e. no results returned)
-          obs.dispose()
-          obs = serverQuery {name: 'peter'}
-          events.length = 0
-          obs.subscribe (event) ->
-            events.push event
-          process.nextTick =>
-            process.nextTick =>
-              assert.deepEqual events, [[]]
-              done()
+      # send two in-flight requests
+      assert.deepEqual serverQuery('Jimbo'), null
+      assert.deepEqual serverQuery('Jimbo'), null
+      assert.deepEqual num_fetches, 0
+      process.nextTick ->
+        assert.deepEqual num_fetches, 1
+        assert.deepEqual serverQuery('Jimbo'), [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]
+        process.nextTick ->
+          assert.deepEqual num_fetches, 1
+          assert.deepEqual serverQuery('Jimbo'), [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]
+          done()
 
     it 'serializes and deseralizes', (done) ->
       serialized = @db.serialize()
