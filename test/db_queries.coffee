@@ -215,7 +215,7 @@ module.exports = ->
 
         fetch: (name) -> {url: '/blah', name: name}
 
-        update: (name, prevResults, err, response) ->
+        update: (name, err, response) ->
           col.upsert {
             _id: name,
             a: response

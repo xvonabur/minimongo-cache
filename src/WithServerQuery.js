@@ -43,7 +43,7 @@ var WithServerQuery = {
           locks[identity] = true;
           this.fetch(spec.fetch.apply(this, args.concat([result.result])), function(err, body) {
             try {
-              spec.update.apply(this, args.concat([result.result, err, body]));
+              spec.update.apply(this, args.concat([err, body, result.result]));
             } finally {
               delete locks[identity];
             }
