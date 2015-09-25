@@ -149,11 +149,10 @@ var getTodos = cache.createServerQuery({
   query: function(authorId) {
     // Fetch the data from the cache
     var results = cache.todos.find({authorId: authorId});
-    if (results.length === 0) {
-      // null indicates that the cache is empty
-      return null;
-    }
-    return results;
+    return {
+      result: results,
+      needsFetch: results.length === 0,
+    };
   },
 
   fetch: function(authorId) {
@@ -164,7 +163,7 @@ var getTodos = cache.createServerQuery({
     };
   },
 
-  update: function(authorId, err, response) {
+  update: function(authorId, _, err, response) {
     // This receives the results from the fetch and updates the local cache
     response.forEach(function(result) {
       cache.todos.upsert(result);
