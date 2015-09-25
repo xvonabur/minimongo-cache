@@ -27,6 +27,7 @@ var WithServerQuery = {
 
       invariant(
         typeof result === 'object' &&
+          result &&
           typeof result.needsFetch === 'boolean' &&
           result.hasOwnProperty('result'),
         'query() must return an object with needsFetch and result fields'
