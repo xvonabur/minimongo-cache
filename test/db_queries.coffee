@@ -208,13 +208,14 @@ module.exports = ->
       serverQuery = @db.createServerQuery
         query: (name) ->
           results = col.find {a: name}
-          if results.length == 0
-            return null
-          return results
+          return {
+            result: results,
+            needsFetch: results.length == 0
+          }
 
         fetch: (name) -> {url: '/blah', name: name}
 
-        update: (name, err, response) ->
+        update: (name, prevResults, err, response) ->
           col.upsert {
             _id: name,
             a: response
@@ -227,8 +228,8 @@ module.exports = ->
           cb null, params.name
 
       # send two in-flight requests
-      assert.deepEqual serverQuery('Jimbo'), null
-      assert.deepEqual serverQuery('Jimbo'), null
+      assert.deepEqual serverQuery('Jimbo'), []
+      assert.deepEqual serverQuery('Jimbo'), []
       assert.deepEqual num_fetches, 0
       process.nextTick ->
         assert.deepEqual num_fetches, 1
