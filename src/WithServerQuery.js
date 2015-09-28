@@ -10,6 +10,7 @@ function defaultIdentity() {
 function defaultProcess(result) {
   return {
     result: result.result,
+    // TODO: does this rename make sense?
     loading: result.needsFetch,
   };
 }
@@ -20,7 +21,8 @@ var WithServerQuery = {
     spec.identity = spec.identity || defaultIdentity;
     spec.process = spec.process || defaultProcess;
 
-    // These need better names
+    // TODO: These need better names
+    // TODO: a `this` scope
     invariant(typeof spec.fetch === 'function', 'Forgot a fetch() function');
     invariant(typeof spec.update === 'function', 'Forgot an update() functino');
     invariant(typeof spec.query === 'function', 'Forgot a query() function');
@@ -65,7 +67,7 @@ var WithServerQuery = {
         }
       }
 
-      return spec.process.call(this, result);
+      return spec.process.apply(this, [result].concat(args));
     }.bind(this);
   },
 
