@@ -223,20 +223,19 @@ module.exports = ->
 
       num_fetches = 0
       @db.injectFetcher (params, cb) ->
-        process.nextTick ->
-          num_fetches += 1
-          cb null, params.name
+        num_fetches += 1
+        cb null, params.name
 
       # send two in-flight requests
-      assert.deepEqual serverQuery('Jimbo'), []
-      assert.deepEqual serverQuery('Jimbo'), []
-      assert.deepEqual num_fetches, 0
+      assert.deepEqual serverQuery('Jimbo'), {loading: true, result: []}
+      assert.deepEqual serverQuery('Jimbo'), {loading: true, result: []}
+      assert.deepEqual num_fetches, 0 # fetching was pushed into the next tick
       process.nextTick ->
         assert.deepEqual num_fetches, 1
-        assert.deepEqual serverQuery('Jimbo'), [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]
+        assert.deepEqual serverQuery('Jimbo'), {loading: false, result: [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]}
         process.nextTick ->
           assert.deepEqual num_fetches, 1
-          assert.deepEqual serverQuery('Jimbo'), [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]
+          assert.deepEqual serverQuery('Jimbo'), {loading: false, result: [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]}
           done()
 
     it 'serializes and deseralizes', (done) ->

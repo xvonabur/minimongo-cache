@@ -7,15 +7,25 @@ function defaultIdentity() {
   return JSON.stringify(Array.prototype.slice.call(arguments));
 }
 
+function defaultProcess(result) {
+  return {
+    result: result.result,
+    loading: result.needsFetch,
+  };
+}
+
 var WithServerQuery = {
   createServerQuery: function(spec) {
     spec = _.clone(spec);
     spec.identity = spec.identity || defaultIdentity;
+    spec.process = spec.process || defaultProcess;
 
+    // These need better names
     invariant(typeof spec.fetch === 'function', 'Forgot a fetch() function');
     invariant(typeof spec.update === 'function', 'Forgot an update() functino');
     invariant(typeof spec.query === 'function', 'Forgot a query() function');
-    invariant(typeof spec.identity === 'function', 'Forgot a key() function');
+    invariant(typeof spec.identity === 'function', 'Forgot an identity() function');
+    invariant(typeof spec.process === 'function', 'Forgot a process() function');
 
     var locks = {};
 
@@ -41,19 +51,21 @@ var WithServerQuery = {
         if (!locks[identity]) {
           // No pending fetch for this data.
           locks[identity] = true;
-          this.fetch(spec.fetch.apply(this, args.concat([result.result])), function(err, body) {
-            try {
-              spec.update.apply(this, args.concat([err, body, result.result]));
-            } finally {
-              delete locks[identity];
-            }
-          });
+          process.nextTick(function() {
+            // Run in next tick to avoid synchronous callback race conditions and get fetch() out of the
+            // ObservableRead transaction.
+            this.fetch(spec.fetch.apply(this, args.concat([result.result])), function(err, body) {
+              try {
+                spec.update.apply(this, args.concat([err, body, result.result]));
+              } finally {
+                delete locks[identity];
+              }
+            });
+          }.bind(this));
         }
-
-        return result.result;
-      } else {
-        return result.result;
       }
+
+      return spec.process.call(this, result);
     }.bind(this);
   },
 
