@@ -115,7 +115,7 @@ class Collection
     for item in items
       # Shallow copy since MemoryDb adds _version to the document.
       # TODO: should we get rid of this mutation?
-      doc = _.merge({}, @items[item.doc._id] || {}, item.doc)
+      doc = _.assign({}, @items[item.doc._id] || {}, item.doc)
 
       # Replace/add
       @items[item.doc._id] = doc
