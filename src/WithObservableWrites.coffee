@@ -17,11 +17,11 @@ class WriteTransaction extends NullTransaction
   constructor: (@db) ->
     @dirtyIds = {}
     @queued = false
-    @traces = []
+    @traces = {}
 
   _ensureQueued: ->
     if @db.debug
-      @traces.push(new Error().stack.split('\n').slice(3).join('\n'))
+      @traces[new Error().stack.split('\n').slice(3).join('\n')] = true
 
     if not @queued
       @queued = true
@@ -57,11 +57,11 @@ class WriteTransaction extends NullTransaction
     @db.withTransaction new ReadOnlyTransaction(), =>
       if @db.debug
         traces = @traces
-        @traces = []
+        @traces = {}
         try
           @db.emit 'change', changeRecords
         catch e
-          for trace in traces
+          for trace of traces
             e.stack += '\nFrom previous event:\n' + trace
           @db.uncaughtExceptionHandler(e)
       else
