@@ -283,3 +283,7 @@ Because the original was in CoffeeScript.
   * It could maybe be rethought with immutable.js for better MVCC and `PureRenderMixin` support
   * Doesn't solve the "n+1 queries" problem, and therefore server rendering, like Relay does
     * I intend to build this layer on top of this system
+
+### Why is it slow?
+
+`minimongo-cache` defaults to debug mode which enables long stack traces. These are great for debugging but can be slow. Set `db.debug = false` to disable this feature.
