@@ -245,17 +245,17 @@ module.exports = ->
       assert.deepEqual serialized, deserialized.serialize()
       done()
 
-    #it 'does not allow cascading writes', (done) ->
-    #  @db.on 'change', (changeRecords) =>
-    #    thrown_exception = null
-    #    try
-    #      @col.upsert {_id: 2, name: 'y'}
-    #    catch e
-    #      thrown_exception = e
-    #    assert thrown_exception
-    #    done()
+    it 'does not allow cascading writes', (done) ->
+      @db.on 'change', (changeRecords) =>
+        thrown_exception = null
+        try
+          @col.upsert {_id: 2, name: 'y'}
+        catch e
+          thrown_exception = e
+        assert thrown_exception
+        done()
 
-    #  @col.upsert {_id: 1, name: 'x'}
+      @col.upsert {_id: 1, name: 'x'}
 
     #it 'supports long stack traces', (done) ->
     #  @db.on 'change', (changeRecords) ->

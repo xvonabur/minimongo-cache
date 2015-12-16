@@ -3,6 +3,16 @@ NullTransaction = require './NullTransaction'
 
 _ = require 'lodash'
 
+class ReadOnlyTransaction extends NullTransaction
+  upsert: ->
+    throw new Error('You cannot upsert() during the result of a reactive update')
+
+  del: ->
+    throw new Error('You cannot upsert() during the result of a reactive update')
+
+  canPushTransaction: (transaction) -> !(transaction instanceof WriteTransaction)
+
+
 class WriteTransaction extends NullTransaction
   constructor: (@db) ->
     @dirtyIds = {}
@@ -44,18 +54,18 @@ class WriteTransaction extends NullTransaction
     @dirtyIds = {}
     @queued = false
 
-    # TODO: disable writes during the emit callback? is this already done?
-    if @db.debug
-      traces = @traces
-      @traces = []
-      try
+    @db.withTransaction new ReadOnlyTransaction(), =>
+      if @db.debug
+        traces = @traces
+        @traces = []
+        try
+          @db.emit 'change', changeRecords
+        catch e
+          for trace in traces
+            e.stack += '\nFrom previous event: ' + trace
+          throw e
+      else
         @db.emit 'change', changeRecords
-      catch e
-        for trace in traces
-          e.stack += '\nFrom previous event: ' + trace
-        throw e
-    else
-      @db.emit 'change', changeRecords
 
 
 WithObservableWrites =
