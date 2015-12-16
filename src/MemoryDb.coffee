@@ -17,6 +17,8 @@ module.exports = class MemoryDb
     @debug = true
     @transaction = @getDefaultTransaction()
 
+  uncaughtExceptionHandler: (e) -> throw e
+
   getDefaultTransaction: -> new NullTransaction()
 
   serialize: ->

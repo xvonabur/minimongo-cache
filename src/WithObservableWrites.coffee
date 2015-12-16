@@ -21,7 +21,7 @@ class WriteTransaction extends NullTransaction
 
   _ensureQueued: ->
     if @db.debug
-      @traces.push(new Error().stack)
+      @traces.push(new Error().stack.split('\n').slice(3).join('\n'))
 
     if not @queued
       @queued = true
@@ -62,10 +62,13 @@ class WriteTransaction extends NullTransaction
           @db.emit 'change', changeRecords
         catch e
           for trace in traces
-            e.stack += '\nFrom previous event: ' + trace
-          throw e
+            e.stack += '\nFrom previous event:\n' + trace
+          @db.uncaughtExceptionHandler(e)
       else
-        @db.emit 'change', changeRecords
+        try
+          @db.emit 'change', changeRecords
+        catch e
+          @db.uncaughtExceptionHandler(e)
 
 
 WithObservableWrites =

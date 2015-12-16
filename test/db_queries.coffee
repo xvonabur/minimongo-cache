@@ -257,20 +257,17 @@ module.exports = ->
 
       @col.upsert {_id: 1, name: 'x'}
 
-    #it 'supports long stack traces', (done) ->
-    #  @db.on 'change', (changeRecords) ->
-    #    throw new Error('ouch')
+    it 'supports long stack traces', (done) ->
+      @db.on 'change', (changeRecords) ->
+        throw new Error('ouch')
 
-    #  original_error = console.error
-    #  printed_error = null
-    #  console.error = (err) => printed_error = err
+      printed_error = null
+      @db.uncaughtExceptionHandler = (e) -> printed_error = e.stack
 
-    #  @col.upsert {_id: 1, name: 'x'}
-    #  process.nextTick =>
-    #    assert printed_error.indexOf('upsert') > -1
-
-    #    done()
-
+      @col.upsert {_id: 1, name: 'x'}
+      process.nextTick =>
+        assert printed_error.indexOf('upsert') > -1
+        done()
 
     it 'dels item', (done) ->
       @col.del "2"
