@@ -245,6 +245,33 @@ module.exports = ->
       assert.deepEqual serialized, deserialized.serialize()
       done()
 
+    #it 'does not allow cascading writes', (done) ->
+    #  @db.on 'change', (changeRecords) =>
+    #    thrown_exception = null
+    #    try
+    #      @col.upsert {_id: 2, name: 'y'}
+    #    catch e
+    #      thrown_exception = e
+    #    assert thrown_exception
+    #    done()
+
+    #  @col.upsert {_id: 1, name: 'x'}
+
+    #it 'supports long stack traces', (done) ->
+    #  @db.on 'change', (changeRecords) ->
+    #    throw new Error('ouch')
+
+    #  original_error = console.error
+    #  printed_error = null
+    #  console.error = (err) => printed_error = err
+
+    #  @col.upsert {_id: 1, name: 'x'}
+    #  process.nextTick =>
+    #    assert printed_error.indexOf('upsert') > -1
+
+    #    done()
+
+
     it 'dels item', (done) ->
       @col.del "2"
       results = @col.find({})

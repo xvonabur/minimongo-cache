@@ -14,7 +14,7 @@ processFind = require('./utils').processFind
 module.exports = class MemoryDb
   constructor: ->
     @collections = {}
-
+    @debug = true
     @transaction = @getDefaultTransaction()
 
   getDefaultTransaction: -> new NullTransaction()

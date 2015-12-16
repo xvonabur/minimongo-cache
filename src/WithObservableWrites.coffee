@@ -7,8 +7,12 @@ class WriteTransaction extends NullTransaction
   constructor: (@db) ->
     @dirtyIds = {}
     @queued = false
+    @traces = []
 
   _ensureQueued: ->
+    if @db.debug
+      @traces.push(new Error().stack)
+
     if not @queued
       @queued = true
       process.nextTick => @_flush()
@@ -39,7 +43,19 @@ class WriteTransaction extends NullTransaction
       changeRecords[collectionName] = documentFragments
     @dirtyIds = {}
     @queued = false
-    @db.emit 'change', changeRecords
+
+    # TODO: disable writes during the emit callback? is this already done?
+    if @db.debug
+      traces = @traces
+      @traces = []
+      try
+        @db.emit 'change', changeRecords
+      catch e
+        for trace in traces
+          e.stack += '\nFrom previous event: ' + trace
+        throw e
+    else
+      @db.emit 'change', changeRecords
 
 
 WithObservableWrites =
