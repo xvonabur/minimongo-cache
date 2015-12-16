@@ -21,7 +21,7 @@ class WriteTransaction extends NullTransaction
 
   _ensureQueued: ->
     if @db.debug
-      @traces[new Error().stack.split('\n').slice(3).join('\n')] = true
+      @traces[new Error().stack.split('\n').slice(1).join('\n')] = true
 
     if not @queued
       @queued = true
