@@ -4,14 +4,7 @@ NullTransaction = require './NullTransaction'
 _ = require 'lodash'
 
 class ReadOnlyTransaction extends NullTransaction
-  upsert: ->
-    throw new Error('You cannot upsert() during the result of a reactive update')
-
-  del: ->
-    throw new Error('You cannot upsert() during the result of a reactive update')
-
   canPushTransaction: (transaction) -> !(transaction instanceof WriteTransaction)
-
 
 class WriteTransaction extends NullTransaction
   constructor: (@db) ->
