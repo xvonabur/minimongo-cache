@@ -38,6 +38,7 @@ class ServerQuery {
     };
 
     if (this.querying) {
+      this.state = mergedState;
       this.cache.withTransaction(new SynchronousWriteTransaction(), cb);
     } else {
       cb();
