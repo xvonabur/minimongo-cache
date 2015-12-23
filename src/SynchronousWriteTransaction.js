@@ -9,7 +9,7 @@ function cannotRead() {
 function SynchronousWriteTransaction() {
 }
 
-_.mixin(SynchronousWriteTransaction, {
+_.mixin(SynchronousWriteTransaction.prototype, {
   get: cannotRead,
   find: cannotRead,
   findOne: cannotRead,
