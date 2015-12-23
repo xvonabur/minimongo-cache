@@ -37,8 +37,9 @@ class ServerQuery {
       });
     };
 
+    this.state = mergedState;
+
     if (this.querying) {
-      this.state = mergedState;
       this.cache.withTransaction(new SynchronousWriteTransaction(), cb);
     } else {
       cb();
@@ -57,10 +58,9 @@ class ServerQuery {
       } else {
         const prevProps = this.props;
         this.props = props;
+        this.state = this.cache.serverQueries.get(this.key).state;
         this.queryDidUpdate(prevProps);
       }
-
-      this.state = this.cache.serverQueries.get(this.key).state;
 
       return this.query();
     } finally {
