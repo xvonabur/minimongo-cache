@@ -53,13 +53,15 @@ class ServerQuery {
         this.props = props;
         this.state = this.getInitialState();
         this.setState(this.state);
+        this.state = this.cache.serverQueries.get(this.key).state;
         this.mounted = true;
         this.queryDidMount();
       } else {
         const prevProps = this.props;
+        const prevState = this.state;
         this.props = props;
         this.state = this.cache.serverQueries.get(this.key).state;
-        this.queryDidUpdate(prevProps);
+        this.queryDidUpdate(prevProps, prevState);
       }
 
       return this.query();

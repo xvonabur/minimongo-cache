@@ -146,35 +146,34 @@ todoItems.dispose();
 var xhr = require('xhr');
 
 var getTodos = cache.createServerQuery({
-  query: function(authorId) {
-    // Fetch the data from the cache
-    var results = cache.todos.find({authorId: authorId});
-    return {
-      result: results,
-      needsFetch: results.length === 0,
-    };
+  statics: {
+    getKey: function(props) {
+      return props.authorId;
+    },
   },
 
-  fetch: function(authorId) {
-    // The return value of this function gets passed to the fetcher function (injected below)
-    return {
-      method: 'GET',
-      url: '/todos/' + encodeURIComponent(authorId),
-    };
+  query: function() {
+    return cache.todos.find({authorId: this.props.authorId});
   },
 
-  update: function(authorId, _, err, response) {
-    // This receives the results from the fetch and updates the local cache
-    response.forEach(function(result) {
-      cache.todos.upsert(result);
-    });
+  getInitialState: function() {
+    return {fetching: false};
   },
-});
 
-cache.injectFetcher(function(spec, cb) {
-  return xhr(spec, function(err, _, body) {
-    cb(err, body);
-  });
+  queryDidMount: function() {
+    this.fetch();
+  },
+
+  fetch: function() {
+    xhr(
+      {method: 'GET', url: '/todos/' + encodeURIComponent(this.props.authorId)},
+      function(err, body) {
+        body.forEach(function(result) {
+          cache.todos.upsert(result);
+        });
+      }
+    );
+  },
 });
 ```
 

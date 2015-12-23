@@ -236,6 +236,43 @@ module.exports = ->
 
         done()
 
+    it 'does not remount server queries', (done) ->
+      num_mounts = 0
+      serverQuery = @db.createServerQuery
+        statics:
+          getKey: (props) -> props.a
+        query: ->
+        queryDidMount: -> num_mounts += 1
+      serverQuery(a: 'x', b: 'y')
+      serverQuery(a: 'x', b: 'z')
+      assert.equal num_mounts, 1
+      serverQuery(a: 'y', b: 'z')
+      done()
+
+    it 'synchronously sets state', (done) ->
+      num_queries = 0
+      serverQuery = @db.createServerQuery
+        statics:
+          getKey: -> 'x'
+        query: -> num_queries += 1
+        queryDidMount: -> @setState({})
+      serverQuery(a: 'x', b: 'y')
+      assert.equal num_queries, 1
+      done()
+
+    it 'asynchronously sets state', (done) ->
+      num_queries = 0
+      serverQuery = @db.createServerQuery
+        statics:
+          getKey: -> 'x'
+        query: -> num_queries += 1
+      @db.observe(-> serverQuery(a: 'x', b: 'y')).subscribe (x) ->
+      assert.equal num_queries, 1
+      serverQuery.getInstance({a: 'x'}).setState({})
+      process.nextTick ->
+        assert.equal num_queries, 2
+        done()
+
     it 'serializes and deseralizes', (done) ->
       serialized = @db.serialize()
       deserialized = MemoryDb.deserialize serialized
