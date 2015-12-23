@@ -1,4 +1,5 @@
 var gulp = require("gulp");
+var babel = require('gulp-babel');
 var coffee = require('gulp-coffee');
 var gutil = require('gulp-util');
 var browserify = require('browserify');
@@ -18,6 +19,7 @@ gulp.task('coffee', function() {
 
 gulp.task('copy', function() {
 	return gulp.src(['./src/**/*.js'])
+    .pipe(babel({presets: ['es2015']}))
 		.pipe(gulp.dest('./lib/'));
 });
 

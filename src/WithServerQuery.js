@@ -1,80 +1,115 @@
 'use strict';
 
+var SynchronousWriteTransaction = require('./SynchronousWriteTransaction');
+
 var _ = require('lodash');
 var invariant = require('invariant');
 
-function defaultIdentity() {
-  return JSON.stringify(Array.prototype.slice.call(arguments));
-}
+class ServerQuery {
+  constructor(cache, key) {
+    this.cache = cache;
+    this.key = key;
 
-function defaultProcess(result) {
-  return {
-    result: result.result,
-    // TODO: does this rename make sense?
-    loading: result.needsFetch,
-  };
-}
+    this.mounted = false;
+    this.querying = false;
+  }
 
-var WithServerQuery = {
-  createServerQuery: function(spec) {
-    spec = _.clone(spec);
-    spec.identity = spec.identity || defaultIdentity;
-    spec.process = spec.process || defaultProcess;
+  getInitialState() {
+    return {};
+  }
 
-    // TODO: These need better names
-    // TODO: a `this` scope
-    invariant(typeof spec.fetch === 'function', 'Forgot a fetch() function');
-    invariant(typeof spec.update === 'function', 'Forgot an update() functino');
-    invariant(typeof spec.query === 'function', 'Forgot a query() function');
-    invariant(typeof spec.identity === 'function', 'Forgot an identity() function');
-    invariant(typeof spec.process === 'function', 'Forgot a process() function');
+  queryDidMount() {
+  }
 
-    var locks = {};
+  queryDidUpdate(prevProps) {
+  }
 
-    return function() {
-      invariant(typeof this.fetch === 'function', 'You did not injectFetcher() yet');
+  query() {
+    throw new Error('ServerQuery.query() not implemented');
+  }
 
-      var args = Array.prototype.slice.call(arguments);
-      var result = spec.query.apply(this, arguments);
+  setState(updates) {
+    const mergedState = _.assign({}, this.state, updates);
+    const cb = () => {
+      this.cache.serverQueries.upsert({
+        _id: this.key,
+        state: mergedState,
+      });
+    };
 
-      invariant(
-        typeof result === 'object' &&
-          result &&
-          typeof result.needsFetch === 'boolean' &&
-          result.hasOwnProperty('result'),
-        'query() must return an object with needsFetch and result fields'
-      );
+    if (this.querying) {
+      this.cache.withTransaction(new SynchronousWriteTransaction(), cb);
+    } else {
+      cb();
+    }
+  }
 
-      if (result.needsFetch) {
-        // Cache is empty
-
-        var identity = spec.identity.apply(this, arguments);
-
-        if (!locks[identity]) {
-          // No pending fetch for this data.
-          locks[identity] = true;
-          process.nextTick(function() {
-            // Run in next tick to avoid synchronous callback race conditions and get fetch() out of the
-            // ObservableRead transaction.
-            this.fetch(spec.fetch.apply(this, args.concat([result.result])), function(err, body) {
-              try {
-                spec.update.apply(this, args.concat([err, body, result.result]));
-              } finally {
-                delete locks[identity];
-              }
-            });
-          }.bind(this));
-        }
+  execute(props) {
+    this.querying = true;
+    try {
+      if (!this.mounted) {
+        this.props = props;
+        this.state = this.getInitialState();
+        this.setState(this.state);
+        this.mounted = true;
+        this.queryDidMount();
+      } else {
+        const prevProps = this.props;
+        this.props = props;
+        this.queryDidUpdate(prevProps);
       }
 
-      return spec.process.apply(this, [result].concat(args));
-    }.bind(this);
-  },
+      this.state = this.cache.serverQueries.get(this.key).state;
 
-  injectFetcher: function(fetch) {
-    invariant(!this.fetch, 'You may only call injectFetcher() once');
-    this.fetch = fetch;
-  },
+      return this.query();
+    } finally {
+      this.querying = false;
+    }
+  }
+}
+
+function createNewServerQuery(cache, key, spec) {
+  invariant(spec.hasOwnProperty('query'), 'You must implement query()');
+
+  if (!cache.hasOwnProperty('serverQueries')) {
+    cache.addCollection('serverQueries');
+  }
+
+  let serverQuery = new ServerQuery(cache, key);
+  _.mixin(serverQuery, spec);
+
+  return serverQuery;
+}
+
+let serverQueries = {};
+let numTypes = 0;
+
+const WithServerQuery = {
+  createServerQuery(spec) {
+    const cache = this;
+    invariant(spec.hasOwnProperty('statics'), 'spec must have statics property');
+    invariant(spec.statics.hasOwnProperty('getKey'), 'statics.getKey must be a function');
+
+    const typeId = numTypes++;
+
+    function getInstance(props) {
+      let key = spec.statics.getKey(props);
+      invariant(typeof key === 'string', 'You must return a string key');
+      key = typeId + '~' + key;
+      if (!serverQueries.hasOwnProperty(key)) {
+        serverQueries[key] = createNewServerQuery(cache, key, spec);
+      }
+      return serverQueries[key];
+    }
+
+    function serverQuery(props) {
+      return getInstance(props).execute(props);
+    }
+
+    serverQuery.getInstance = getInstance;
+
+    return serverQuery;
+  }
 };
 
 module.exports = WithServerQuery;

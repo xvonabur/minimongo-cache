@@ -203,40 +203,38 @@ module.exports = ->
     it 'supports server queries', (done) ->
       col = @col
       db = @db
-      db.addCollection 'serverQueries'
+
+      logs = []
+
+      @col.upsert _id: 'foo', name: 'x', age: 99
 
       serverQuery = @db.createServerQuery
-        query: (name) ->
-          results = col.find {a: name}
-          return {
-            result: results,
-            needsFetch: results.length == 0
-          }
+        statics:
+          getKey: (props) -> props.name
+        query: () ->
+          logs.push 'query() ' + JSON.stringify(@state)
+          col.find {a: @props.name}
+        getInitialState: () -> name: ''
+        queryDidMount: () ->
+          @setState name: 'pete'
+          logs.push 'didMount'
+        queryDidUpdate: (prevProps) ->
+          logs.push 'didUpdateProps ' + JSON.stringify(@props) + ', ' + JSON.stringify(prevProps)
 
-        fetch: (name) -> {url: '/blah', name: name}
-
-        update: (name, err, response) ->
-          col.upsert {
-            _id: name,
-            a: response
-          }
-
-      num_fetches = 0
-      @db.injectFetcher (params, cb) ->
-        num_fetches += 1
-        cb null, params.name
-
-      # send two in-flight requests
-      assert.deepEqual serverQuery('Jimbo'), {loading: true, result: []}
-      assert.deepEqual serverQuery('Jimbo'), {loading: true, result: []}
-      assert.deepEqual num_fetches, 0 # fetching was pushed into the next tick
+      sub = @db.observe => serverQuery(name: 'x')
+      sub.subscribe (result) -> logs.push 'result ' + JSON.stringify(result)
+      serverQuery.getInstance(name: 'x').setState(name: 'next')
       process.nextTick ->
-        assert.deepEqual num_fetches, 1
-        assert.deepEqual serverQuery('Jimbo'), {loading: false, result: [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]}
-        process.nextTick ->
-          assert.deepEqual num_fetches, 1
-          assert.deepEqual serverQuery('Jimbo'), {loading: false, result: [{_id: 'Jimbo', a: 'Jimbo', _version: 1}]}
-          done()
+        assert.deepEqual logs, [
+          "didMount",
+          'query() {"name":"pete"}',
+          "result []",
+          'didUpdateProps {"name":"x"}, {"name":"x"}',
+          'query() {"name":"next"}',
+          'result []'
+        ]
+
+        done()
 
     it 'serializes and deseralizes', (done) ->
       serialized = @db.serialize()
