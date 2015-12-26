@@ -47,12 +47,20 @@ class WriteTransaction extends NullTransaction
       if @db.debug
         traces = @traces
         @traces = {}
+        prev_prepare = Error.prepareStackTrace
+        Error.prepareStackTrace = (e) =>
+          stack = e.stack
+          for trace of traces
+            stack += '\nFrom observed write:\n' + trace
+          return stack
+
         try
           @db.emit 'change', changeRecords
         catch e
-          for trace of traces
-            e.stack += '\nFrom previous event:\n' + trace
           @db.uncaughtExceptionHandler(e)
+        finally
+          Error.prepareStackTrace = prev_prepare
+
       else
         try
           @db.emit 'change', changeRecords

@@ -293,15 +293,17 @@ module.exports = ->
       @col.upsert {_id: 1, name: 'x'}
 
     it 'supports long stack traces', (done) ->
-      @db.on 'change', (changeRecords) ->
-        throw new Error('ouch')
+      if navigator.userAgent.toLowerCase().indexOf('chrome') == -1
+        done()
+        return
 
-      printed_error = null
-      @db.uncaughtExceptionHandler = (e) -> printed_error = e.stack
+      captured_stack = null
+      @db.on 'change', (changeRecords) ->
+        captured_stack = new Error('ouch').stack
 
       @col.upsert {_id: 1, name: 'x'}
       process.nextTick =>
-        assert printed_error.indexOf('upsert') > -1
+        assert captured_stack.indexOf('upsert') > -1
         done()
 
     it 'dels item', (done) ->
