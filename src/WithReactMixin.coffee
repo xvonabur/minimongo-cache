@@ -1,6 +1,9 @@
+invariant = require 'invariant'
+
 createMixin = (db) ->
   Mixin =
     componentWillMount: ->
+      invariant @observeData?, 'You must implement observeData: ' + @constructor.displayName
       @subscription = null;
       @prevData = null
       @data = {}
