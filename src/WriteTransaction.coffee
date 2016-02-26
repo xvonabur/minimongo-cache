@@ -43,28 +43,29 @@ class WriteTransaction extends NullTransaction
     @dirtyIds = {}
     @queued = false
 
-    @db.withTransaction new ReadOnlyTransaction(), =>
-      if @db.debug
-        traces = @traces
-        @traces = {}
-        prev_prepare = Error.prepareStackTrace
-        Error.prepareStackTrace = (e) =>
-          stack = e.stack
-          for trace of traces
-            stack += '\nFrom observed write:\n' + trace
-          return stack
+    @db.batchedUpdates =>
+      @db.withTransaction new ReadOnlyTransaction(), =>
+        if @db.debug
+          traces = @traces
+          @traces = {}
+          prev_prepare = Error.prepareStackTrace
+          Error.prepareStackTrace = (e) =>
+            stack = e.stack
+            for trace of traces
+              stack += '\nFrom observed write:\n' + trace
+            return stack
 
-        try
-          @db.emit 'change', changeRecords
-        catch e
-          @db.uncaughtExceptionHandler(e)
-        finally
-          Error.prepareStackTrace = prev_prepare
+          try
+            @db.emit 'change', changeRecords
+          catch e
+            @db.uncaughtExceptionHandler(e)
+          finally
+            Error.prepareStackTrace = prev_prepare
 
-      else
-        try
-          @db.emit 'change', changeRecords
-        catch e
-          @db.uncaughtExceptionHandler(e)
+        else
+          try
+            @db.emit 'change', changeRecords
+          catch e
+            @db.uncaughtExceptionHandler(e)
 
 module.exports = WriteTransaction

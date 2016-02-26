@@ -15,6 +15,7 @@ module.exports = class MemoryDb
   constructor: ->
     @collections = {}
     @debug = true
+    @batchedUpdates = (cb) -> cb()
     @transaction = @getDefaultTransaction()
 
   uncaughtExceptionHandler: (e) -> throw e

@@ -252,6 +252,13 @@ var UserContainer = React.createClass({
 });
 ```
 
+## How to improve performance
+
+  * Favor `db.get()` over `db.find()` or `db.findOne()`
+  * Set `db.batchedUpdates = React.addons.batchedUpdates`
+  * Use `shouldComponentUpdate()` with minimongo-cache's `identity` feature
+  * Set `db.debug = false;`
+
 ## Why not (your technique here)?
 
 ### Why not Om-style immutable state atoms?
