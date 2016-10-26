@@ -30,7 +30,7 @@ createMixin = (db) ->
       @subscription.subscribe @_setData
 
     _setData: (nextData, prevData) ->
-      if @componentWillReceiveData:
+      if @componentWillReceiveData
         @componentWillReceiveData(nextData)
 
       @prevData = @data
