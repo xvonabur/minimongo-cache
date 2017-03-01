@@ -108,9 +108,23 @@ const WithServerQuery = {
     function serverQuery(props) {
       return getInstance(props).execute(props);
     }
+    
+    function invalidate(props) {
+      var key = spec.statics.getKey(props);
+      key = typeId + '~' + key;
+      serverQueries = Object.keys(serverQueries).reduce((acc, k) => {
+        const obj = acc;
+        if (k !== key) {
+          obj[k] = serverQueries[k];
+        }
+        return obj;
+      }, {});
+      return serverQuery(props);
+    };
 
     serverQuery.getInstance = getInstance;
-
+    serverQuery.invalidate = invalidate;
+    
     return serverQuery;
   }
 };
