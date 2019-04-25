@@ -17,7 +17,7 @@ module.exports = ->
     # Test a filter to return specified rows (in order)
     @testFilter = (filter, ids, done) ->
       results = @col.find(filter, { sort:["_id"]})
-      assert.deepEqual _.pluck(results, '_id'), ids
+      assert.deepEqual _.map(results, '_id'), ids
       done()
 
   context 'With sample rows', ->
@@ -316,22 +316,22 @@ module.exports = ->
 
     it 'sorts ascending', (done) ->
       results = @col.find({}, {sort: ['a']})
-      assert.deepEqual _.pluck(results, '_id'), ["1","3","2"]
+      assert.deepEqual _.map(results, '_id'), ["1","3","2"]
       done()
 
     it 'sorts descending', (done) ->
       results = @col.find({}, {sort: [['a','desc']]})
-      assert.deepEqual _.pluck(results, '_id'), ["2","3","1"]
+      assert.deepEqual _.map(results, '_id'), ["2","3","1"]
       done()
 
     it 'limits', (done) ->
       results = @col.find({}, {sort: ['a'], limit:2})
-      assert.deepEqual _.pluck(results, '_id'), ["1","3"]
+      assert.deepEqual _.map(results, '_id'), ["1","3"]
       done()
 
     it 'skips', (done) ->
       results = @col.find({}, {sort: ['a'], skip:2})
-      assert.deepEqual _.pluck(results, '_id'), ["2"]
+      assert.deepEqual _.map(results, '_id'), ["2"]
       done()
 
     it 'shares memory for identical instances', (done) ->
@@ -388,7 +388,7 @@ module.exports = ->
 
     it 'finds sorts in Javascript order', (done) ->
       results = @col.find({}, {sort: ['a']})
-      assert.deepEqual _.pluck(results, '_id'), ["2","1"]
+      assert.deepEqual _.map(results, '_id'), ["2","1"]
       done()
 
   context 'With integer array in json rows', ->
@@ -466,7 +466,7 @@ module.exports = ->
           $geometry: geopoint(90, 45)
 
       results = @col.find(selector)
-      assert.deepEqual _.pluck(results, '_id'), ["1","3","2","4"]
+      assert.deepEqual _.map(results, '_id'), ["1","3","2","4"]
       done()
 
     it 'finds points near maxDistance', (done) ->
@@ -476,7 +476,7 @@ module.exports = ->
           $maxDistance: 111180
 
       results = @col.find(selector)
-      assert.deepEqual _.pluck(results, '_id'), ["1","3"]
+      assert.deepEqual _.map(results, '_id'), ["1","3"]
       done()
 
     it 'finds points near maxDistance just above', (done) ->
@@ -486,7 +486,7 @@ module.exports = ->
           $maxDistance: 111410
 
       results = @col.find(selector)
-      assert.deepEqual _.pluck(results, '_id'), ["1","3","2"]
+      assert.deepEqual _.map(results, '_id'), ["1","3","2"]
       done()
 
     it 'finds points within simple box', (done) ->
@@ -498,7 +498,7 @@ module.exports = ->
               [89.5, 45.5], [89.5, 46.5], [90.5, 46.5], [90.5, 45.5], [89.5, 45.5]
             ]]
       results = @col.find(selector)
-      assert.deepEqual _.pluck(results, '_id'), ["2"]
+      assert.deepEqual _.map(results, '_id'), ["2"]
       done()
 
     it 'finds points within big box', (done) ->
@@ -510,7 +510,7 @@ module.exports = ->
               [0, -89], [0, 89], [179, 89], [179, -89], [0, -89]
             ]]
       results = @col.find(selector, {sort:['_id']})
-      assert.deepEqual _.pluck(results, '_id'), ["1", "2", "3", "4"]
+      assert.deepEqual _.map(results, '_id'), ["1", "2", "3", "4"]
       done()
 
     it 'handles undefined', (done) ->
@@ -523,5 +523,5 @@ module.exports = ->
             ]]
       @col.upsert { _id:5 }
       results = @col.find(selector)
-      assert.deepEqual _.pluck(results, '_id'), ["2"]
+      assert.deepEqual _.map(results, '_id'), ["2"]
       done()

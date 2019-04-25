@@ -19,10 +19,10 @@ exports.processFind = (items, selector, options) ->
     filtered.sort(compileSort(options.sort))
 
   if options and options.skip
-    filtered = _.rest filtered, options.skip
+    filtered = _.drop filtered, options.skip
 
   if options and options.limit
-    filtered = _.first filtered, options.limit
+    filtered = _.take filtered, options.limit
 
   # Clone to prevent accidental updates, or apply fields if present
   if options and options.fields
@@ -123,10 +123,10 @@ processNearOperator = (selector, list) ->
         distances = _.filter distances, (item) -> item.distance <= value['$near']['$maxDistance']
 
       # Limit to 100
-      distances = _.first distances, 100
+      distances = _.take distances, 100
 
       # Extract docs
-      list = _.pluck distances, 'doc'
+      list = _.map distances, 'doc'
   return list
 
 # Very simple polygon check. Assumes that is a square
