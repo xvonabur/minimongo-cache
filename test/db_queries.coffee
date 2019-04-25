@@ -292,20 +292,6 @@ module.exports = ->
 
       @col.upsert {_id: 1, name: 'x'}
 
-    it 'supports long stack traces', (done) ->
-      if navigator.userAgent.toLowerCase().indexOf('chrome') == -1
-        done()
-        return
-
-      captured_stack = null
-      @db.on 'change', (changeRecords) ->
-        captured_stack = new Error('ouch').stack
-
-      @col.upsert {_id: 1, name: 'x'}
-      process.nextTick =>
-        assert captured_stack.indexOf('upsert') > -1
-        done()
-
     it 'dels item', (done) ->
       @col.del "2"
       results = @col.find({})
