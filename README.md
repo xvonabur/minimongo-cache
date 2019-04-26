@@ -1,5 +1,7 @@
 # minimongo-cache
 
+[![Dependency Status](https://david-dm.org/xvonabur/minimongo-cache/status.svg)](https://david-dm.org/xvonabur/minimongo-cache/status.svg)
+
 A forked version of [Minimongo](https://github.com/mWater/minimongo) designed for a synchronous local cache for React apps. This is designed to replace Flux.
 
 Not ready for production use.
