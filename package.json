@@ -1,6 +1,6 @@
 {
   "name": "@xvonabur/minimongo-cache",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Fork of minimongo designed for caching",
   "main": "index.js",
   "scripts": {
